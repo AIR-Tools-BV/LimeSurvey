@@ -1,4 +1,4 @@
-# Limesurvey airpanels plugin
+# Limesurvey AirTools plugin
 This is a plugin to extend limesurvey with AI capabilities
 
 ### Authorization

@@ -1,17 +1,17 @@
 <?php
 require_once 'TransformersApiClient.php';
-
-class Airpanels extends PluginBase
+class AirTools extends PluginBase
 {
-    /**
-     * @var string
-     */
-    static protected $description = 'Airpanels Plugin';
 
     /**
      * @var string
      */
-    static protected $name = 'Airpanels';
+    static protected $description = 'AirTools Plugin';
+
+    /**
+     * @var string
+     */
+    static protected $name = 'AirTools';
 
     /**
      * @var string
@@ -31,7 +31,7 @@ class Airpanels extends PluginBase
         'api_url' => array(
             'type' => 'text',
             'label' => 'API URL Transformers group',
-            'default' => 'https://api.acc.airpanels.wearetransformers.nl'
+            'default' => 'https://api.acc.airtools.wearetransformers.nl'
         ),
     );
 
@@ -40,7 +40,24 @@ class Airpanels extends PluginBase
     {
         $this->subscribe('newUnsecureRequest');
         $this->subscribe('beforeControllerAction');
+        $this->subscribe('newDirectRequest');
     }
+
+    public function newDirectRequest() {
+         //handle the request
+         $target = Yii::app()->request->getQuery('target');
+         $function = Yii::app()->request->getQuery('function');
+         if ($target == "AirTools") {
+            switch ($function) {
+                case 'getDefaultGroupsByUser':
+                    $this->handleGetDefaultGroupsByUser();
+                    break;
+                default:
+                    $this->sendErrorResponse(404, 'Function not found.');
+                    break;
+            }
+    }
+}
 
     public function newUnsecureRequest()
     {
@@ -50,17 +67,19 @@ class Airpanels extends PluginBase
         //handle the request
         $target = Yii::app()->request->getQuery('target');
         $function = Yii::app()->request->getQuery('function');
-        if ($target == "Airpanels") {
+        if ($target == "AirTools") {
             switch ($function) {
                 case 'addQuestion':
                     $this->actionAddQuestion();
                     break;
-                case 'CreateQuestionsByDescription':
+                case 'createQuestionsByDescription':
                     $this->handleCreateQuestionsByDescription();
                     break;
-                case 'QuestionsDescriptionToSurvey':
-                    $this->handleQuestionsDescriptionToSurvey();
+                case 'questionsDescriptionToSurveyGroup':
+                    $this->handleQuestionsDescriptionToSurveyGroup();
                     break;
+                default:
+                    $this->sendErrorResponse(404, 'Function not found.');
             }
         }
     }
@@ -78,6 +97,11 @@ class Airpanels extends PluginBase
             $this->sendErrorResponse(400, 'Invalid JSON content provided.');
         }
         return $data;
+    }
+
+    private function handleGetDefaultGroupsByUser() {
+        $survey_groups = SurveysGroups::model()->getSurveyGroupsList();
+        $this->sendSuccessResponse($survey_groups);
     }
 
     private function handleCreateQuestionsByDescription()
@@ -107,7 +131,7 @@ class Airpanels extends PluginBase
             $this->sendErrorResponse(500, 'Error while streaming response: ' . $e->getMessage());
         }
     }
-    private function handleQuestionsDescriptionToSurvey()
+    private function handleQuestionsDescriptionToSurveyGroup()
     {
         $data = $this->parseJsonPostRequest();
         $surveyId = $data['surveyId'] ?? null;
@@ -245,7 +269,7 @@ class Airpanels extends PluginBase
             throw new CHttpException(403, 'You do not have the permission to access this page');
         }
         $settings = parent::getPluginSettings($getValues);
-        $url = Yii::app()->createUrl('plugins/unsecure', ['plugin' => 'Airpanels', 'target' => 'Airpanels', 'function' => 'addQuestion']);
+        $url = Yii::app()->createUrl('plugins/unsecure', ['plugin' => 'AirTools', 'target' => 'AirTools', 'function' => 'addQuestion']);
         $settings['information']['content'] = 'To add a question to a survey, send a POST request to the following URL: <a href="' . $url . '">' . $url . '</a> ';
         return $settings;
     }
@@ -256,11 +280,10 @@ class Airpanels extends PluginBase
         // Check if the current controller and action are the ones we want to modify
         if ($event->get('controller') === 'surveyAdministration' && $event->get('action') === 'newSurvey') {
             $this->addNewTab();
-        }
-        elseif ($event->get('controller') === 'questionGroupsAdministration' && $event->get('action') === 'view') {
+        } elseif ($event->get('controller') === 'questionGroupsAdministration' && $event->get('action') === 'view') {
             $this->addReactWidgetToQuestionGroupsPage();
         }
-        if ($event->get('controller') === 'surveyAdministration'&& $event->get("action") === 'view') {
+        if ($event->get('controller') === 'surveyAdministration' && $event->get("action") === 'view') {
             $this->addReactWidgetToQuestionGroupsPage();
         }
     }
@@ -276,18 +299,21 @@ class Airpanels extends PluginBase
                 $('#create-import-copy-survey').append(newTab);
 
                 var newTabContent = '<div class=\"tab-pane fade\" id=\"ai-widget\" role=\"tabpanel\">' +
-                                    '<div id=\"ai-question-widget\"></div>' +
+                                    '<div id=\"create-survey-widget\"></div>' +
                                     '</div>';
                 $('.tab-content').append(newTabContent);
-                window.mountReactApp('ai-question-widget');
+                window.mountReactApp('create-survey-widget');
             });
         ", CClientScript::POS_END);
-        App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/index.js'), CClientScript::POS_HEAD);
+        //register the script file
+        App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.js'), CClientScript::POS_HEAD, ['type' => 'module']);
+        //register the css file
+        App()->clientScript->registerCssFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.css'));
     }
     private function addReactWidgetToQuestionGroupsPage()
-{
-    // Add the React widget to the questionGroupsAdministration page
-    App()->clientScript->registerScript('add-react-widget', "
+    {
+        // Add the React widget to the questionGroupsAdministration page
+        App()->clientScript->registerScript('add-react-widget', "
         $(document).ready(function() {
             function mountReactWidget() {
                 var widgetContainer = '<div id=\"ai-question-group-widget\" class=\"my-3\"></div>';
@@ -302,6 +328,9 @@ class Airpanels extends PluginBase
             });
         });
     ", CClientScript::POS_END);
-    App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/js/index.js'), CClientScript::POS_HEAD, ['type' => 'module']);
-}
+        App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.js'), CClientScript::POS_HEAD, ['type' => 'module']);
+        //register the css file
+        App()->clientScript->registerCssFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.css'));
+    }
+
 }
