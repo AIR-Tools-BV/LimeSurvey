@@ -43,11 +43,12 @@ class AirTools extends PluginBase
         $this->subscribe('newDirectRequest');
     }
 
-    public function newDirectRequest() {
-         //handle the request
-         $target = Yii::app()->request->getQuery('target');
-         $function = Yii::app()->request->getQuery('function');
-         if ($target == "AirTools") {
+    public function newDirectRequest()
+    {
+        //handle the request
+        $target = Yii::app()->request->getQuery('target');
+        $function = Yii::app()->request->getQuery('function');
+        if ($target == "AirTools") {
             switch ($function) {
                 case 'getDefaultGroupsByUser':
                     $this->handleGetDefaultGroupsByUser();
@@ -56,8 +57,8 @@ class AirTools extends PluginBase
                     $this->sendErrorResponse(404, 'Function not found.');
                     break;
             }
+        }
     }
-}
 
     public function newUnsecureRequest()
     {
@@ -78,6 +79,10 @@ class AirTools extends PluginBase
                 case 'questionsDescriptionToSurveyGroup':
                     $this->handleQuestionsDescriptionToSurveyGroup();
                     break;
+                case 'documentToSurvey':
+                    $this->handleDocumentToSurvey();
+                    break;
+
                 default:
                     $this->sendErrorResponse(404, 'Function not found.');
             }
@@ -99,7 +104,8 @@ class AirTools extends PluginBase
         return $data;
     }
 
-    private function handleGetDefaultGroupsByUser() {
+    private function handleGetDefaultGroupsByUser()
+    {
         $survey_groups = SurveysGroups::model()->getSurveyGroupsList();
         $this->sendSuccessResponse($survey_groups);
     }
@@ -126,7 +132,6 @@ class AirTools extends PluginBase
             // Get the streaming response from the FastAPI backend
             header('Content-Type: application/x-ndjson', true, 200);
             $api_client->createSurvey($description, $oSurvey->language);
-
         } catch (Exception $e) {
             $this->sendErrorResponse(500, 'Error while streaming response: ' . $e->getMessage());
         }
@@ -193,27 +198,7 @@ class AirTools extends PluginBase
         }
 
         $this->sendSuccessResponse(['message' => 'Questions added to survey.']);
-
     }
-
-    private function sendErrorResponse($statusCode, $message, $additionalData = [])
-    {
-        http_response_code($statusCode);
-        $response = ['error' => $message];
-        if (!empty($additionalData)) {
-            $response = array_merge($response, $additionalData);
-        }
-        echo json_encode($response);
-        Yii::app()->end();
-    }
-
-    private function sendSuccessResponse($data)
-    {
-        header('Content-Type: application/json', true, 200);
-        echo json_encode($data);
-        Yii::app()->end();
-    }
-
 
     private function actionAddQuestion()
     {
@@ -309,6 +294,7 @@ class AirTools extends PluginBase
         App()->clientScript->registerScriptFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.js'), CClientScript::POS_HEAD, ['type' => 'module']);
         //register the css file
         App()->clientScript->registerCssFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.css'));
+        $this->addIconFonts();
     }
     private function addReactWidgetToQuestionGroupsPage()
     {
@@ -333,4 +319,153 @@ class AirTools extends PluginBase
         App()->clientScript->registerCssFile(App()->assetManager->publish(dirname(__FILE__) . '/assets/index.css'));
     }
 
+    private function addIconFonts()
+    {
+        App()->clientScript->registerScriptFile('https://kit.fontawesome.com/a00f3047db.js', CClientScript::POS_HEAD, ['crossorigin' => 'anonymous']);
+    }
+
+    private function sendErrorResponse($statusCode, $message, $additionalData = [])
+    {
+        http_response_code($statusCode);
+        $response = ['error' => $message];
+        if (!empty($additionalData)) {
+            $response = array_merge($response, $additionalData);
+        }
+        echo json_encode($response);
+        Yii::app()->end();
+    }
+
+    private function sendSuccessResponse($data)
+    {
+        header('Content-Type: application/json', true, 200);
+        echo json_encode($data);
+        Yii::app()->end();
+    }
+
+    private function handleDocumentToSurvey()
+    {
+        // Check if a file was uploaded
+        if (empty($_FILES['file'])) {
+            $this->sendErrorResponse(400, 'No file uploaded.');
+            return;
+        }
+
+        $file = $_FILES['file'];
+
+        // Get the survey ID from the POST request
+        $surveyId = $_POST['surveyId'] ?? null;
+        if (empty($surveyId)) {
+            $this->sendErrorResponse(400, 'Missing surveyId.');
+            return;
+        }
+
+        // Check if the user has permission to add questions to this survey
+        if (!Permission::model()->hasSurveyPermission($surveyId, 'surveycontent', 'create')) {
+            throw new CHttpException(403, 'You do not have the permission to add questions to this survey.');
+        }
+
+        // Instantiate the API client
+        $apiClient = new TransformersApiClient($this->get('api_key'), $this->get('api_url'));
+
+        // Upload the document to the Transformers API
+        try {
+            $response = $apiClient->uploadDocument($file);
+            if ($response['httpCode'] !== 200) {
+                $this->sendErrorResponse($response['httpCode'], 'Error from Transformers API: ' . $response['response']['message']);
+                return;
+            }
+        } catch (Exception $e) {
+            $this->sendErrorResponse(500, 'Error uploading document: ' . $e->getMessage());
+            return;
+        }
+
+        $groups = $response['response']['groups'] ?? [];
+        if (empty($groups)) {
+            $this->sendErrorResponse(500, 'No groups were returned from the API.');
+            return;
+        }
+        $this->clearSurvey($surveyId);
+        // Insert the questions into the survey
+        $groupIds = $this->insertQuestionsIntoSurvey($surveyId, $groups);
+        $this->sendSuccessResponse(['message' => 'Questions added to survey.', 'result'=> ['surveyId' => $surveyId, 'groups' => $groupIds]]);
+    }
+
+    private function insertQuestionsIntoSurvey($surveyId, $groups)
+    {
+        $oSurvey = Survey::model()->findByPk($surveyId);
+        $groupId = null;
+        $groupIds = [];
+        foreach ($groups as $group) {
+            $groupName = $group['name'];
+            $questions = $group['questions'];
+
+            // Create the question group
+            $groupId = $this->createQuestionGroup($surveyId, $groupName, $oSurvey->language);
+            $questionIds = [];
+            // Import each question
+            foreach ($questions as $question) {
+                $qId = $this->importQuestion($surveyId, $groupId, $question);
+                $questionIds[] = $qId;
+            }
+            $groupIds[] = ['groupId' => $groupId, 'questionIds' => $questionIds];
+        }
+        return $groupIds;
+    }
+
+    private function clearSurvey($surveyId)
+    {
+        // Delete all questions from the survey
+        $questions = Question::model()->findAllByAttributes(['sid' => $surveyId]);
+        foreach ($questions as $question) {
+            $question->delete();
+        }
+
+        // Delete all question groups from the survey
+        $groups = QuestionGroup::model()->findAllByAttributes(['sid' => $surveyId]);
+        foreach ($groups as $group) {
+            $group->delete();
+        }
+    }
+
+    private function createQuestionGroup($surveyId, $groupName, $language)
+    {
+        // Create a new question group and return its ID
+        $group = new QuestionGroup;
+        $group->sid = $surveyId;
+        $group->group_name = $groupName;
+        $group->language = $language;
+        $group->save();
+        $gid = $group->gid;
+        $oQuestionGroupL10n = new QuestionGroupL10n();
+        $oQuestionGroupL10n->group_name = $groupName;
+        $oQuestionGroupL10n->description = '';
+        $oQuestionGroupL10n->language = $language;
+        $oQuestionGroupL10n->gid = $gid;
+
+        if ($oQuestionGroupL10n->save()) {
+            return (int) $group->gid;
+        } else {
+            throw new CHttpException(500, 'Error creating question group.');
+        }
+    }
+
+    private function importQuestion($surveyId, $groupId, $questionContent)
+    {
+        $importResult = null;
+        // Create a temporary file to store the question content
+        $tempFilePath = tempnam(sys_get_temp_dir(), 'lsq');
+        file_put_contents($tempFilePath, $questionContent);
+
+        // Import the question using the XMLImportQuestion function
+        Yii::import('application.helpers.admin.import_helper', true);
+        try {
+            $options = array('autorename' => true, 'translinkfields' => true);
+            $importResult = XMLImportQuestion($tempFilePath, $surveyId, $groupId, $options);
+            unlink($tempFilePath); // Clean up the temporary file
+        } catch (Exception $e) {
+            unlink($tempFilePath); // Clean up the temporary file
+            throw new CHttpException(500, 'Error importing question: ' . $e->getMessage());
+        }
+        return (int)$importResult['newqid'];
+    }
 }

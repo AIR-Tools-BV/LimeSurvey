@@ -38,7 +38,7 @@ class TransformersApiClient
             if (!ob_get_level()) {
                 ob_start();
             }
-            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function($ch, $data) {
+            curl_setopt($ch, CURLOPT_WRITEFUNCTION, function ($ch, $data) {
                 echo $data;
                 ob_flush();
                 flush();
@@ -77,7 +77,7 @@ class TransformersApiClient
 
     public function createSurvey($surveyContent, $language)
     {
-        $data = ['content' => $surveyContent, 'language'=> $language];
+        $data = ['content' => $surveyContent, 'language' => $language];
         return $this->sendRequest('POST', '/create', $data, true);
     }
 
@@ -85,5 +85,33 @@ class TransformersApiClient
     {
         $data = ['content' => $unstructuredContent];
         return $this->sendRequest('POST', '/unstructured', $data);
+    }
+
+    public function uploadDocument($file)
+    {
+        $url = $this->apiUrl . '/upload';
+        $headers = [
+            "Authorization: Bearer {$this->apiKey}",
+        ];
+
+        $postFields = [
+            'file' => new CURLFile($file['tmp_name'], $file['type'], $file['name']),
+        ];
+
+        $options = [
+            CURLOPT_URL => $url,
+            CURLOPT_HTTPHEADER => $headers,
+            CURLOPT_POST => true,
+            CURLOPT_POSTFIELDS => $postFields,
+            CURLOPT_RETURNTRANSFER => true,
+        ];
+
+        $ch = curl_init();
+        curl_setopt_array($ch, $options);
+        $response = curl_exec($ch);
+        $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+        curl_close($ch);
+
+        return ['response' => json_decode($response, true), 'httpCode' => $httpCode];
     }
 }
