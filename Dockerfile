@@ -12,10 +12,8 @@ RUN rm -r .git
 
 # Set permissions as stated here: https://manual.limesurvey.org/Installation_-_LimeSurvey_CE
 RUN chmod -R 755 /var/www/html && \
-    chmod -R 777 /var/www/html/tmp && \
-    chmod -R 777 /var/www/html/upload && \
-    chmod -R 777 /var/www/html/application/config && \
-    find /var/www/html/admin -type f -exec chmod 444 {} \;
+    chmod -R 777 /var/www/html/tmp /var/www/html/upload /var/www/html/application/config && \
+    find /var/www/html/admin -type f -exec chmod 444 {} +
     
 # Install PHP extensions and other dependencies
 RUN apt update && \
