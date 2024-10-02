@@ -14,9 +14,13 @@
         <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#small-screens-menus" aria-controls="small-screens-menus" aria-expanded="false">
             <span class="navbar-toggler-icon"></span>
         </button>
-        <a class="navbar-brand" href="<?php echo $this->createUrl("/admin/"); ?>">
-            <img src="<?= Yii::app()->baseUrl ?>/assets/images/airtools-logo.png" height="34" class="d-inline-block align-bottom" alt="">
-            <?= $sitename ?>
+        <a class="navbar-brand" href="/index.php/admin/index" style="display: flex; align-items: center;">
+            <img src="/assets/images/airtools-logo.png" height="54" style="margin-right: 10px;" class="d-inline-block align-bottom" alt="">
+            <span style="font-size: 18px;">Air-tools.nl</span>
+        </a>
+        <a class="navbar-brand" href="<?php echo $this->createUrl("/admin/"); ?>"  style="display: flex; align-items: center;">
+            <img src="<?= Yii::app()->baseUrl ?>/assets/images/airtools-logo.png" height="54" style="margin-right: 10px;" class="d-inline-block align-bottom" alt="">
+            <span style="font-size: 18px;"><?= $sitename ?></span>
         </a>
         <!-- Only on xs screens -->
         <div class="collapse navbar-collapse " id="small-screens-menus">
