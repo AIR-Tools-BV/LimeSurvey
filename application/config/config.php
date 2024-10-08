@@ -54,6 +54,15 @@ return array(
             ),
             'showScriptName' => true,
         ),
+        'log' => array(
+            'routes' => array(
+                'fileError' => array(
+                    'class' => 'CFileLogRoute',
+                    'levels' => 'warning, error',
+                    'except' => 'exception.CHttpException.404',
+                ),
+            ),
+        ),
 
     ),
     // Use the following config variable to set modified optional settings copied from config-defaults.php
