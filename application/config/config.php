@@ -26,10 +26,15 @@
 return array(
     'components' => array(
         'db' => array(
-            'connectionString' => 'mysql:host=localhost;port=3306;dbname=limesurvey;',
+            'connectionString' => sprintf(
+                'mysql:host=%s;port=%s;dbname=%s;',
+                getenv('DB_HOST'),
+                getenv('DB_PORT'),
+                getenv('DB_NAME')
+            ),
             'emulatePrepare' => true,
-            'username' => 'root',
-            'password' => 'root',
+            'username' => getenv('DB_USERNAME'),
+            'password' => getenv('DB_PASSWORD'),
             'charset' => 'utf8mb4',
             'tablePrefix' => 'lime_',
         ),
@@ -57,14 +62,14 @@ return array(
         // then please check your error-logs - either in your hosting provider admin panel or in some /logs directory
         // on your webspace.
         // LimeSurvey developers: Set this to 2 to additionally display STRICT PHP error messages and put MySQL in STRICT mode and get full access to standard themes
-        'debug'=>2,
-        'debugsql'=>1, // Set this to 1 to enanble sql logging, only active when debug = 2
+        'debug'=>1,
+        'debugsql'=>2, // Set this to 1 to enanble sql logging, only active when debug = 2
         // 'force_xmlsettings_for_survey_rendering' => true, // Uncomment if you want to force the use of the XML file rather than DB (for easy theme development)
         // 'use_asset_manager'=>true, // Uncomment if you want to use debug mode and asset manager at the same time
         // Update default LimeSurvey config here
 
-        // Increase memory limit
-        'memory_limit' => '2048M',  // Increase memory limit to 512MB or any desired value
+        'mysqlEngine' => 'INNODB',
+        'memory_limit' => '2048'
     )
 );
 /* End of file config.php */
