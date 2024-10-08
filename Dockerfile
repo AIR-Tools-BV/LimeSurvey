@@ -34,6 +34,8 @@ EXPOSE 80
 # Modify the php.ini
 RUN echo "memory_limit = 4G" >> $PHP_INI_DIR/php.ini
 RUN echo "upload_tmp_dir = /var/www/html/tmp" >>  $PHP_INI_DIR/php.ini
+RUN echo "upload_max_filesize = 500M" >> $PHP_INI_DIR/php.ini
+RUN echo "post_max_size = 500M" >> $PHP_INI_DIR/php.ini
 
 
 # Start Apache when the container runs
