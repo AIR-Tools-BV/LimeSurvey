@@ -11,7 +11,9 @@ COPY . .
 RUN rm -r .git
 
 # Set permissions as stated here: https://manual.limesurvey.org/Installation_-_LimeSurvey_CE
-RUN chmod -R 755 /var/www/html && \
+RUN chown -R www-data:www-data /var/www/html/tmp && \
+     chown -R www-data:www-data /var/www/html/upload && \
+    chmod -R 755 /var/www/html && \
     chmod -R 777 /var/www/html/tmp && \
     chmod -R 777 /var/www/html/upload && \
     chmod -R 777 /var/www/html/application/config && \
