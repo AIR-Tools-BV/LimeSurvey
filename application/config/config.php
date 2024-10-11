@@ -52,7 +52,7 @@ return array(
             'rules' => array(
                 // You can add your own rules here
             ),
-            'showScriptName' => false,
+            'showScriptName' => true,
         ),
         'log' => array(
             'routes' => array(
