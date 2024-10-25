@@ -60,6 +60,7 @@ return array(
                     'class' => 'CFileLogRoute',
                     'levels' => 'warning, error',
                     'except' => 'exception.CHttpException.404',
+                    'logFile' => '/var/www/html/application/logs/limesurvey-test-lars.log', // Update this to your desired log path
                 ),
             ),
         ),
