@@ -41,11 +41,11 @@ return array(
 
         // Uncomment the following lines if you need table-based sessions.
         // Note: Table-based sessions are currently not supported on MSSQL server.
-        // 'session' => array (
-        // 'class' => 'application.core.web.DbHttpSession',
-        // 'connectionID' => 'db',
-        // 'sessionTableName' => '{{sessions}}',
-        // ),
+         'session' => array (
+         'class' => 'application.core.web.DbHttpSession',
+         'connectionID' => 'db',
+         'sessionTableName' => '{{sessions}}',
+         ),
 
         'urlManager' => array(
             'urlFormat' => 'path',
@@ -78,7 +78,10 @@ return array(
         // Update default LimeSurvey config here
 
         'mysqlEngine' => 'INNODB',
-        'memory_limit' => '2048'
+        'memory_limit' => '2048',
+
+        // Enforce https
+        'force_ssl' => 'on'
     )
 );
 /* End of file config.php */

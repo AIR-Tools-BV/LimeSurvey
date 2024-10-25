@@ -13,7 +13,7 @@
             Order deny,allow
             Deny from all
         </IfModule>
-        <IfModule mod_authz_core.c>
+        <IfModulpclzip.lib.phpe mod_authz_core.c>
             Require all denied
         </IfModule>
     </IfModule>
