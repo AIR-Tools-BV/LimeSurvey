@@ -41,11 +41,11 @@ return array(
 
         // Uncomment the following lines if you need table-based sessions.
         // Note: Table-based sessions are currently not supported on MSSQL server.
-         'session' => array (
-         'class' => 'application.core.web.DbHttpSession',
-         'connectionID' => 'db',
-         'sessionTableName' => '{{sessions}}',
-         ),
+        // 'session' => array (
+        // 'class' => 'application.core.web.DbHttpSession',
+        // 'connectionID' => 'db',
+        // 'sessionTableName' => '{{sessions}}',
+        // ),
 
         'urlManager' => array(
             'urlFormat' => 'path',
@@ -71,17 +71,14 @@ return array(
         // then please check your error-logs - either in your hosting provider admin panel or in some /logs directory
         // on your webspace.
         // LimeSurvey developers: Set this to 2 to additionally display STRICT PHP error messages and put MySQL in STRICT mode and get full access to standard themes
-        'debug'=>2,
-        'debugsql'=>1, // Set this to 1 to enanble sql logging, only active when debug = 2
+        'debug'=>1,
+        'debugsql'=>2, // Set this to 1 to enanble sql logging, only active when debug = 2
         // 'force_xmlsettings_for_survey_rendering' => true, // Uncomment if you want to force the use of the XML file rather than DB (for easy theme development)
         // 'use_asset_manager'=>true, // Uncomment if you want to use debug mode and asset manager at the same time
         // Update default LimeSurvey config here
 
         'mysqlEngine' => 'INNODB',
-        'memory_limit' => '2048',
-
-        // Enforce https
-        'force_ssl' => 'on'
+        'memory_limit' => '2048'
     )
 );
 /* End of file config.php */
