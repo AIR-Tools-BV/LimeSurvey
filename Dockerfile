@@ -1,5 +1,5 @@
 # Use an official PHP runtime as a parent image
-FROM php:8.3.7-apache
+FROM php:8.1.30-apache
 
 # Set the working directory in the container
 WORKDIR /var/www/html
