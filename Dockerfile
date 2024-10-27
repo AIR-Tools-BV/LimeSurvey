@@ -15,9 +15,9 @@ RUN chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 777 /var/www/html/tmp && \
     chmod -R 777 /var/www/html/upload && \
-    chmod -R 777 /var/www/html/application/config && \
-    find /var/www/html/admin -type f -exec chmod 444 {} \;
-    
+    chmod -R 777 /var/www/html/application/config #&& \
+    find /var/www/html/admin -type f -exec chmod 444 {} ;
+
 # Install PHP extensions and other dependencies
 RUN apt update && \
     apt install -y libpng-dev libjpeg-dev libfreetype6-dev libicu-dev libldap2-dev libzip-dev libc-client-dev libkrb5-dev && \
