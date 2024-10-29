@@ -51,11 +51,11 @@ return array(
             ),
         ),
 
-//        // Configure request to handle trusted proxies and headers
-//        'request' => array(
-//            'enableCsrfValidation' => true,
-//            'enableCookieValidation' => true,
-//        ),
+        // Configure request to handle trusted proxies and headers
+        'request' => array(
+            'enableCsrfValidation' => true,
+            'enableCookieValidation' => true,
+        ),
 
         'urlManager' => array(
             'urlFormat' => 'path',
