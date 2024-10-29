@@ -1,24 +1,16 @@
-# Use an official PHP runtime as a parent image
 FROM php:8.1.30-apache
 
-# Set the working directory in the container
 WORKDIR /var/www/html
 
-# Copy your PHP application code into the container
 COPY . .
 
-# Remove the .git folder since it is huge
-RUN rm -r .git
-
-# Set permissions as stated here: https://manual.limesurvey.org/Installation_-_LimeSurvey_CE
-RUN chown -R www-data:www-data /var/www/html && \
+RUN rm -r .git && \
+    chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 777 /var/www/html/tmp && \
     chmod -R 777 /var/www/html/upload && \
-    chmod -R 777 /var/www/html/application/config #&& \
-    find /var/www/html/admin -type f -exec chmod 444 {} ;
+    chmod -R 777 /var/www/html/application/config
 
-# Install PHP extensions and other dependencies
 RUN apt update && \
     apt install -y libpng-dev libjpeg-dev libfreetype6-dev libicu-dev libldap2-dev libzip-dev libc-client-dev libkrb5-dev && \
     docker-php-ext-configure gd --with-freetype --with-jpeg && \
@@ -28,15 +20,42 @@ RUN apt update && \
     apt clean && \
     rm -rf /var/lib/apt/lists/*
 
-# Expose the port Apache listens on
 EXPOSE 80
 
-# Modify the php.ini
 RUN echo "memory_limit = 4G" >> $PHP_INI_DIR/php.ini && \
     echo "upload_tmp_dir = /var/www/html/tmp" >>  $PHP_INI_DIR/php.ini && \
     echo "upload_max_filesize = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "post_max_size = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "session.save_path = /var/www/html/tmp" >> $PHP_INI_DIR/php.ini
 
-# Start Apache when the container runs
-CMD ["apache2-foreground"]
+# Create a script to set ServerName dynamically
+RUN echo '#!/bin/bash\n\
+if [ -z "$SERVER_NAME" ]; then\n\
+  echo "ServerName not set. Using localhost."\n\
+  SERVER_NAME="localhost"\n\
+fi\n\
+echo "Setting ServerName to $SERVER_NAME"\n\
+echo "ServerName $SERVER_NAME" >> /etc/apache2/conf-available/servername.conf\n\
+a2enconf servername\n\
+apache2-foreground' > /usr/local/bin/start-apache
+
+RUN chmod +x /usr/local/bin/start-apache
+
+# Add custom Apache configuration for KeepAlive
+RUN echo 'KeepAlive On\n\
+MaxKeepAliveRequests 100\n\
+KeepAliveTimeout 1' >> /etc/apache2/apache2.conf \
+
+# Add custom Apache configuration
+RUN echo '<IfModule mpm_event_module>\n\
+    StartServers 2\n\
+    MinSpareThreads 25\n\
+    MaxSpareThreads 75\n\
+    ThreadLimit 64\n\
+    ThreadsPerChild 25\n\
+    MaxRequestWorkers 150\n\
+    MaxConnectionsPerChild 10000\n\
+</IfModule>' > /etc/apache2/mods-available/mpm_event.conf
+
+
+CMD ["/usr/local/bin/start-apache"]

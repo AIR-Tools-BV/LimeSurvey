@@ -2,15 +2,25 @@ version: '3.8'
 
 services:
   limesurvey:
+#    image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:v0.0.66
     build: .
     ports:
       - "80:80"
     depends_on:
       - mariadb
     volumes:
-      - limesurvey_tmp:/var/www/html/tmp
+#      - limesurvey_tmp:/var/www/html/tmp
       - limesurvey_upload:/var/www/html/upload
-      - limesurvey_config:/var/www/html/application/config
+#      - limesurvey_config:/var/www/html/application/config
+    environment:
+      - DB_HOST=mariadb
+      - DB_USERNAME=limesurvey
+      - DB_PASSWORD=limesurvey
+      - DB_PORT=3306
+      - DB_NAME=limesurvey
+      - SERVER_NAME=localhost
+
+
 
   mariadb:
     image: mariadb:11.4.2
@@ -21,9 +31,12 @@ services:
       - MYSQL_PASSWORD=limesurvey
     volumes:
       - mariadb_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+
 
 volumes:
   mariadb_data:
-  limesurvey_tmp:
+#  limesurvey_tmp:
   limesurvey_upload:
-  limesurvey_config:
+#  limesurvey_config:
