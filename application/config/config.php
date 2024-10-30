@@ -45,15 +45,15 @@ return array(
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
             'cookieParams' => array(
-                'secure' => false,          // Ensure cookies are only sent over HTTPS
-                'httponly' => false,        // Prevent JavaScript access to the cookie
+                'secure' => true,          // Ensure cookies are only sent over HTTPS
+                'httponly' => true,        // Prevent JavaScript access to the cookie
                 'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
             ),
         ),
 
         // Configure request to handle trusted proxies and headers
         'request' => array(
-            'enableCsrfValidation' => false,
+            'enableCsrfValidation' => true,
         ),
 
         'urlManager' => array(
@@ -61,7 +61,7 @@ return array(
             'rules' => array(
                 // You can add your own rules here
             ),
-            'showScriptName' => false,
+            'showScriptName' => true,
         ),
         'log' => array(
             'routes' => array(
