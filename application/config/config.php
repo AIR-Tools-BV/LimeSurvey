@@ -53,8 +53,7 @@ return array(
 
         // Configure request to handle trusted proxies and headers
         'request' => array(
-            'enableCsrfValidation' => true,
-            'enableCookieValidation' => true,
+            'enableCsrfValidation' => false,
         ),
 
         'urlManager' => array(
