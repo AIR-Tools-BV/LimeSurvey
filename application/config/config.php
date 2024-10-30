@@ -39,17 +39,17 @@ return array(
             'tablePrefix' => 'lime_',
         ),
 
-//        // Enable table-based sessions with session persistence
-//        'session' => array(
-//            'class' => 'application.core.web.DbHttpSession',
-//            'connectionID' => 'db',
-//            'sessionTableName' => '{{sessions}}',
-//            'cookieParams' => array(
-//                'secure' => true,          // Ensure cookies are only sent over HTTPS
-//                'httponly' => true,        // Prevent JavaScript access to the cookie
-//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
-//            ),
-//        ),
+        // Enable table-based sessions with session persistence
+        'session' => array(
+            'class' => 'application.core.web.DbHttpSession',
+            'connectionID' => 'db',
+            'sessionTableName' => '{{sessions}}',
+            'cookieParams' => array(
+                'secure' => true,          // Ensure cookies are only sent over HTTPS
+                'httponly' => true,        // Prevent JavaScript access to the cookie
+                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+            ),
+        ),
 
         // Configure request to handle trusted proxies and headers
         'request' => array(
