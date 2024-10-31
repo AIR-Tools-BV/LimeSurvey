@@ -55,6 +55,15 @@ return array(
 //        'request' => array(
 //            'enableCsrfValidation' => true,
 //        ),
+        'request' => [
+            'class' => 'yii\web\Request',
+            'baseUrl' => 'https://' . getenv('SERVER_NAME'),
+            'trustedHosts' => ['*'],  // Trust all proxies, or specify your load balancer IP.
+            'secureHeaders' => [
+                'X-Forwarded-Proto' => ['https']
+            ],
+            'enableCsrfValidation' => true,
+        ],
 
         'urlManager' => array(
             'urlFormat' => 'path',
