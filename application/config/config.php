@@ -46,11 +46,11 @@ return array(
             'sessionTableName' => '{{sessions}}',
             'cookieMode' => 'allow',
             'cookieParams' => array(
-                'secure' => false,          // Ensure cookies are only sent over HTTPS
+                'secure' => true,          // Ensure cookies are only sent over HTTPS
                 'httponly' => true,        // Prevent JavaScript access to the cookie
                 'domain' => '.' . getenv('SERVER_NAME'),
 
-//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+                'samesite' => 'Lax',      // Adjust if cross-origin issues persist (None, Lax, Strict)
             ),
         ),
 
