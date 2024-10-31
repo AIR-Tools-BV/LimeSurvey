@@ -46,7 +46,7 @@ return array(
             'sessionTableName' => '{{sessions}}',
             'cookieMode' => 'allow',
             'cookieParams' => array(
-                'secure' => true,          // Ensure cookies are only sent over HTTPS
+                'secure' => false,          // Ensure cookies are only sent over HTTPS
                 'httponly' => true,        // Prevent JavaScript access to the cookie
                 'domain' => '.' . getenv('SERVER_NAME'),
 
@@ -60,8 +60,8 @@ return array(
 //        ),
         'request' => [
 //            'baseUrl' => getenv('SERVER_NAME'),
-            'hostInfo' => 'http://' . getenv('SERVER_NAME'),
-            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME') ),
+            'hostInfo' => 'https://' . getenv('SERVER_NAME'),
+            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => false ),
 //            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
             'enableCsrfValidation' => true,
         ],
