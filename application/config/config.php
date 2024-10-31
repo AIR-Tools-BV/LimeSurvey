@@ -45,8 +45,8 @@ return array(
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
             'cookieParams' => array(
-                'secure' => true,          // Ensure cookies are only sent over HTTPS
-                'httponly' => true,        // Prevent JavaScript access to the cookie
+                'secure' => false,          // Ensure cookies are only sent over HTTPS
+                'httponly' => false,        // Prevent JavaScript access to the cookie
                 'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
             ),
         ),
