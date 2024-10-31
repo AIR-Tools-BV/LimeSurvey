@@ -44,10 +44,13 @@ return array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
+            'cookieMode' => 'allow',
             'cookieParams' => array(
                 'secure' => true,          // Ensure cookies are only sent over HTTPS
                 'httponly' => true,        // Prevent JavaScript access to the cookie
-                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+                'domain' => '.' . getenv('SERVER_NAME'),
+
+//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
             ),
         ),
 
@@ -57,8 +60,8 @@ return array(
 //        ),
         'request' => [
 //            'baseUrl' => getenv('SERVER_NAME'),
-            'hostInfo' => 'https://' . getenv('SERVER_NAME'),
-
+            'hostInfo' => 'http://' . getenv('SERVER_NAME'),
+            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME') ),
 //            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
             'enableCsrfValidation' => true,
         ],
