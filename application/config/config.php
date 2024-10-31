@@ -44,11 +44,11 @@ return array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
-//            'cookieParams' => array(
-//                'secure' => false,          // Ensure cookies are only sent over HTTPS
-//                'httponly' => false,        // Prevent JavaScript access to the cookie
-//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
-//            ),
+            'cookieParams' => array(
+                'secure' => true,          // Ensure cookies are only sent over HTTPS
+                'httponly' => true,        // Prevent JavaScript access to the cookie
+                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+            ),
         ),
 
 //        // Configure request to handle trusted proxies and headers
@@ -56,12 +56,10 @@ return array(
 //            'enableCsrfValidation' => true,
 //        ),
         'request' => [
-            'class' => 'yii\web\Request',
-            'baseUrl' => 'https://' . getenv('SERVER_NAME'),
-            'trustedHosts' => ['*'],  // Trust all proxies, or specify your load balancer IP.
-            'secureHeaders' => [
-                'X-Forwarded-Proto' => ['https']
-            ],
+//            'baseUrl' => getenv('SERVER_NAME'),
+            'hostInfo' => 'https://' . getenv('SERVER_NAME'),
+
+//            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
             'enableCsrfValidation' => true,
         ],
 
