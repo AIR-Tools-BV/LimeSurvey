@@ -44,17 +44,17 @@ return array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
-            'cookieParams' => array(
-                'secure' => false,          // Ensure cookies are only sent over HTTPS
-                'httponly' => false,        // Prevent JavaScript access to the cookie
-                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
-            ),
+//            'cookieParams' => array(
+//                'secure' => false,          // Ensure cookies are only sent over HTTPS
+//                'httponly' => false,        // Prevent JavaScript access to the cookie
+//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+//            ),
         ),
 
-        // Configure request to handle trusted proxies and headers
-        'request' => array(
-            'enableCsrfValidation' => true,
-        ),
+//        // Configure request to handle trusted proxies and headers
+//        'request' => array(
+//            'enableCsrfValidation' => true,
+//        ),
 
         'urlManager' => array(
             'urlFormat' => 'path',
