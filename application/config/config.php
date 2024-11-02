@@ -40,31 +40,31 @@ return array(
         ),
 
         // Enable table-based sessions with session persistence
-        'session' => array(
-            'class' => 'application.core.web.DbHttpSession',
-            'connectionID' => 'db',
-            'sessionTableName' => '{{sessions}}',
-            'cookieMode' => 'allow',
-            'cookieParams' => array(
-                'secure' => true,          // Ensure cookies are only sent over HTTPS
-                'httponly' => true,        // Prevent JavaScript access to the cookie
-                'domain' => '.' . getenv('SERVER_NAME'),
-
-                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
-            ),
-        ),
+//        'session' => array(
+//            'class' => 'application.core.web.DbHttpSession',
+//            'connectionID' => 'db',
+//            'sessionTableName' => '{{sessions}}',
+//            'cookieMode' => 'allow',
+//            'cookieParams' => array(
+//                'secure' => true,          // Ensure cookies are only sent over HTTPS
+//                'httponly' => true,        // Prevent JavaScript access to the cookie
+//                'domain' => '.' . getenv('SERVER_NAME'),
+//
+//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+//            ),
+//        ),
 
 //        // Configure request to handle trusted proxies and headers
 //        'request' => array(
 //            'enableCsrfValidation' => true,
 //        ),
-        'request' => [
-//            'baseUrl' => getenv('SERVER_NAME'),
-            'hostInfo' => getenv('PROTOCOL') . '://' . getenv('SERVER_NAME'),
-            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => true ),
-//            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
-            'enableCsrfValidation' => true,
-        ],
+//        'request' => [
+////            'baseUrl' => getenv('SERVER_NAME'),
+//            'hostInfo' => getenv('PROTOCOL') . '://' . getenv('SERVER_NAME'),
+//            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => true ),
+////            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
+//            'enableCsrfValidation' => true,
+//        ],
 
         'urlManager' => array(
             'urlFormat' => 'path',
