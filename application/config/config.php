@@ -50,7 +50,7 @@ return array(
                 'httponly' => true,        // Prevent JavaScript access to the cookie
                 'domain' => '.' . getenv('SERVER_NAME'),
 
-                'samesite' => 'Lax',      // Adjust if cross-origin issues persist (None, Lax, Strict)
+                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
             ),
         ),
 
@@ -60,8 +60,8 @@ return array(
 //        ),
         'request' => [
 //            'baseUrl' => getenv('SERVER_NAME'),
-            'hostInfo' => 'https://' . getenv('SERVER_NAME'),
-            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => false ),
+            'hostInfo' => getenv('PROTOCOL') . '://' . getenv('SERVER_NAME'),
+            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => true ),
 //            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
             'enableCsrfValidation' => true,
         ],

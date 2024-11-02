@@ -123,6 +123,15 @@ function checkLSSession()
     Yii::createApplication('LSYii_Application', $config);
     Yii::app()->session->open();
     chdir($currentDir);
+    // Check if session opened correctly
+    if (Yii::app()->session->isStarted) {
+        error_log("Session started successfully.");
+        error_log("Session ID: " . Yii::app()->session->sessionID);
+        error_log("LimeSurvey CSRF Token: " . Yii::app()->request->csrfToken);
+    } else {
+        error_log("Failed to start session.");
+    }
+
 }
 
 checkLSSession();

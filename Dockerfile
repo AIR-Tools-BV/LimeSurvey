@@ -26,7 +26,7 @@ RUN echo "memory_limit = 4G" >> $PHP_INI_DIR/php.ini && \
     echo "upload_tmp_dir = /var/www/html/tmp" >>  $PHP_INI_DIR/php.ini && \
     echo "upload_max_filesize = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "post_max_size = 500M" >> $PHP_INI_DIR/php.ini && \
-    echo "session.save_path = /var/www/html/tmp" >> $PHP_INI_DIR/php.ini && \
+#    echo "session.save_path = /var/www/html/tmp" >> $PHP_INI_DIR/php.ini && \
     echo "output_buffering = On" >> $PHP_INI_DIR/php.ini
 
 # Create a script to set ServerName dynamically

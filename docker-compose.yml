@@ -19,6 +19,7 @@ services:
       - DB_PORT=3306
       - DB_NAME=limesurvey
       - SERVER_NAME=localhost
+      - PROTOCOL=http
 
 
 
