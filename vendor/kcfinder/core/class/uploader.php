@@ -826,17 +826,51 @@ if (window.opener) window.close();
     protected function get_htaccess() {
         return file_get_contents("conf/upload.htaccess");
     }
+    
     protected function controlCSRFToken()
     {
-        if (isset($_SERVER['REQUEST_METHOD']) && !strcasecmp($_SERVER['REQUEST_METHOD'],'POST'))
-        {
-            if (!isset($_POST['kcfinder_csrftoken']) || (isset($_POST['kcfinder_csrftoken']) && $_POST['kcfinder_csrftoken']!=$this->session['kcfinder_csrf_token']))
-            {
+        // Check if the request method is POST
+        if (isset($_SERVER['REQUEST_METHOD']) && !strcasecmp($_SERVER['REQUEST_METHOD'], 'POST')) {
+
+            // Log the request method for debugging
+            error_log("Request method: " . $_SERVER['REQUEST_METHOD']);
+
+            // Log the presence and value of the CSRF token in the POST data
+            if (!isset($_POST['kcfinder_csrftoken'])) {
+                error_log("CSRF token is missing in POST data.");
+            } else {
+                error_log("CSRF token received in POST: " . $_POST['kcfinder_csrftoken']);
+            }
+
+            // Log the expected CSRF token from the session
+            if (isset($this->session['kcfinder_csrf_token'])) {
+                error_log("Expected CSRF token in session: " . $this->session['kcfinder_csrf_token']);
+            } else {
+                error_log("Expected CSRF token is missing in session.");
+            }
+
+            // Check for token mismatch
+            if (!isset($_POST['kcfinder_csrftoken']) ||
+                (isset($_POST['kcfinder_csrftoken']) && $_POST['kcfinder_csrftoken'] != $this->session['kcfinder_csrf_token'])) {
+
+                // Log the exact comparison result
+                error_log("Token comparison result: " . ($_POST['kcfinder_csrftoken'] == $this->session['kcfinder_csrf_token'] ? "Tokens match" : "Tokens do not match"));
+
+                // Log the mismatch if it occurs
+                if ($_POST['kcfinder_csrftoken'] != $this->session['kcfinder_csrf_token']) {
+                    error_log("CSRF token mismatch: POST token (" . $_POST['kcfinder_csrftoken'] . ") does not match session token (" . $this->session['kcfinder_csrf_token'] . ")");
+                }
+
                 return "CSRF upload error";
             }
         }
+
+        // No issues with CSRF token
+        error_log("CSRF token validated successfully.");
         return;
-    }   
+    }
+
+
     // Set the session kcfinder_csrf_token to a token and return this token
     protected function getCSRFToken() {
         if (function_exists("hash_algos") and in_array("sha512",hash_algos()))
