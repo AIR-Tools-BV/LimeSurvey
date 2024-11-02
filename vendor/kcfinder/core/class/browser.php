@@ -51,10 +51,7 @@ class browser extends uploader {
                 )
             )
         )
-
-            error_log("Cannot access or create thumbnails folder.");
-
-        $this->errorMsg("Cannot access or create thumbnails folder.");
+            $this->errorMsg("Cannot access or create thumbnails folder.");
 
         $this->thumbsDir = $thumbsDir;
         $this->thumbsTypeDir = "$thumbsDir/{$this->type}";
@@ -97,7 +94,6 @@ class browser extends uploader {
             else {
                 header("Content-Type: text/plain; charset={$this->charset}");
                 die(json_encode(array('error' => $message)));
-                error_log(json_encode(array('error' => $message)));
             }
         }
         if($crsfControl=$this->controlCSRFToken())
@@ -109,7 +105,6 @@ class browser extends uploader {
             else {
                 header("Content-Type: text/plain; charset={$this->charset}");
                 die(json_encode(array('error' => $crsfControl)));
-                error_log(json_encode(array('error' => $crsfControl)));
             }
         }
         if (!isset($this->session['dir']))
@@ -913,7 +908,7 @@ class browser extends uploader {
     }
 
     protected function errorMsg($message, array $data=null) {
-        error_log(json_encode(array('error11' => $message, 'error12' => $data)));
+        error_log(json_encode(array('message' => $message, 'data' => $data)));
 
         if (in_array($this->action, array("thumb", "upload", "download", "downloadDir")))
             die($this->label($message, $data));
