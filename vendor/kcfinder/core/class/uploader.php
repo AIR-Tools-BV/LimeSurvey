@@ -741,6 +741,7 @@ class uploader {
     }
 
     protected function backMsg($message, array $data=null) {
+        error_log(json_encode(array('message' => $message, 'data' => $data)));
         $message = $this->label($message, $data);
         $tmp_name = isset($this->file['tmp_name']) ? $this->file['tmp_name'] : false;
 
