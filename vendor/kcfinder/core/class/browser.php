@@ -80,8 +80,6 @@ class browser extends uploader {
 
     public function action() {
         $act = isset($_GET['act']) ? $_GET['act'] : "browser";
-        error_log("Started action. Act=" . $act);
-
         if (!method_exists($this, "act_$act"))
             $act = "browser";
         $this->action = $act;
@@ -95,7 +93,6 @@ class browser extends uploader {
                 $this->backMsg($message);
             else {
                 header("Content-Type: text/plain; charset={$this->charset}");
-                error_log(json_encode(array('message' => $message)));
                 die(json_encode(array('error' => $message)));
             }
         }
@@ -107,7 +104,6 @@ class browser extends uploader {
                 $this->backMsg($crsfControl);
             else {
                 header("Content-Type: text/plain; charset={$this->charset}");
-                error_log(json_encode(array('crsfControl' => $csrfControl));
                 die(json_encode(array('error' => $crsfControl)));
             }
         }
