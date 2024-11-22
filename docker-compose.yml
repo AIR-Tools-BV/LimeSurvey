@@ -2,8 +2,8 @@ version: '3.8'
 
 services:
   limesurvey:
-#    image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:v0.0.92
-    build: .
+    image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:v0.0.92
+#    build: .
     ports:
       - "80:80"
     depends_on:
