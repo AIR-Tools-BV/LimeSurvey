@@ -43,11 +43,9 @@ return array(
             // Enable CSRF Validation
             'enableCsrfValidation' => true,
             // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
-            'enableCsrfCookie' => true,
             'csrfCookie' => array(
-                'httpOnly' => true,
-                'secure' => true, // Set to true if your site is always served over HTTPS, adjust accordingly
-                'sameSite' => 'Lax', // Adjust according to your requirements
+                'sameSite' => 'Lax',
+                'secure' => true,
             ),
         ),
 
