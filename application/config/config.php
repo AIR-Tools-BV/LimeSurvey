@@ -39,6 +39,15 @@ return array(
             'tablePrefix' => 'lime_',
         ),
 
+        'session' => array(
+            'cookieParams' => array(
+                'httpOnly' => true,
+                'secure' => true, // Ensure cookies are sent over HTTPS
+                'sameSite' => 'Lax', // Adjust based on your requirements
+            ),
+            // Other session configurations...
+        ),
+
         'request' => array(
             // Enable CSRF Validation
             'enableCsrfValidation' => true,
