@@ -39,32 +39,17 @@ return array(
             'tablePrefix' => 'lime_',
         ),
 
-        // Enable table-based sessions with session persistence
-//        'session' => array(
-//            'class' => 'application.core.web.DbHttpSession',
-//            'connectionID' => 'db',
-//            'sessionTableName' => '{{sessions}}',
-//            'cookieMode' => 'allow',
-//            'cookieParams' => array(
-//                'secure' => true,          // Ensure cookies are only sent over HTTPS
-//                'httponly' => true,        // Prevent JavaScript access to the cookie
-//                'domain' => '.' . getenv('SERVER_NAME'),
-//
-//                'samesite' => 'None',      // Adjust if cross-origin issues persist (None, Lax, Strict)
-//            ),
-//        ),
-
-//        // Configure request to handle trusted proxies and headers
-//        'request' => array(
-//            'enableCsrfValidation' => true,
-//        ),
-//        'request' => [
-////            'baseUrl' => getenv('SERVER_NAME'),
-//            'hostInfo' => getenv('PROTOCOL') . '://' . getenv('SERVER_NAME'),
-//            'csrfCookie' => array( 'domain' => '.' . getenv('SERVER_NAME'), 'secure' => true ),
-////            'trustedHosts' => ['0.0.0.0'],  // Trust all proxies, or specify your load balancer IP.
-//            'enableCsrfValidation' => true,
-//        ],
+        'request' => array(
+            // Enable CSRF Validation
+            'enableCsrfValidation' => true,
+            // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
+            'enableCsrfCookie' => true,
+            'csrfCookie' => array(
+                'httpOnly' => true,
+                'secure' => true, // Set to true if your site is always served over HTTPS, adjust accordingly
+                'sameSite' => 'Lax', // Adjust according to your requirements
+            ),
+        ),
 
         'urlManager' => array(
             'urlFormat' => 'path',

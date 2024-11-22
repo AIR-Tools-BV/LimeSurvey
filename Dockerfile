@@ -1,5 +1,21 @@
 FROM php:8.1.30-apache
 
+# Enable mod_remoteip and configure
+RUN a2enmod remoteip && \
+    { \
+        echo 'RemoteIPHeader X-Forwarded-For'; \
+        echo 'RemoteIPTrustedProxy 35.191.0.0/16'; \
+        echo 'RemoteIPTrustedProxy 130.211.0.0/22'; \
+    } > /etc/apache2/conf-available/remoteip.conf && \
+    a2enconf remoteip
+
+# Configure Apache to use the headers set by the load balancer
+RUN { \
+        echo 'SetEnvIf X-Forwarded-Proto "https" HTTPS=on'; \
+    } >> /etc/apache2/apache2.conf
+
+
+
 WORKDIR /var/www/html
 
 COPY . .
