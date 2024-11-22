@@ -841,9 +841,6 @@ if (window.opener) window.close();
             } else {
                 error_log("CSRF token received in POST: " . $_POST['kcfinder_csrftoken']);
             }
-            
-            // Log the entire session data
-            error_log("Full session data: " . print_r($this->session, true));
 
             // Log the expected CSRF token from the session
             if (isset($this->session['kcfinder_csrf_token'])) {
