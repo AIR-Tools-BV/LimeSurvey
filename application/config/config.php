@@ -39,6 +39,14 @@ return array(
             'tablePrefix' => 'lime_',
         ),
 
+        'cache'=>array(
+            'class'=>'CRedisCache',
+            'hostname'=>'redis.default.svc.cluster.local',
+            'port'=>6379,
+            'database'=>0,
+            'options'=>STREAM_CLIENT_CONNECT,
+        ),
+
         'session' => array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
