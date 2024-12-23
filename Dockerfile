@@ -38,7 +38,7 @@ RUN apt update && \
 
 EXPOSE 80
 
-RUN echo "memory_limit = 4G" >> $PHP_INI_DIR/php.ini && \
+RUN echo "memory_limit = 16G" >> $PHP_INI_DIR/php.ini && \
     echo "upload_tmp_dir = /var/www/html/tmp" >>  $PHP_INI_DIR/php.ini && \
     echo "upload_max_filesize = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "post_max_size = 500M" >> $PHP_INI_DIR/php.ini && \
