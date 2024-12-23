@@ -41,7 +41,7 @@ return array(
 
         'cache'=>array(
             'class'=>'CRedisCache',
-            'hostname'=>'redis.default.svc.cluster.local',
+            'hostname'=>'127.0.0.1',
             'port'=>6379,
             'database'=>0,
             'options'=>STREAM_CLIENT_CONNECT,
