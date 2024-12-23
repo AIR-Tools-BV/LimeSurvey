@@ -90,7 +90,7 @@ return array(
         // Update default LimeSurvey config here
 
         'mysqlEngine' => 'INNODB',
-        'memory_limit' => '2048'
+        'memory_limit' => '4096'
     )
 );
 /* End of file config.php */
