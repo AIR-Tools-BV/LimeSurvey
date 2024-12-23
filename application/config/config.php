@@ -40,6 +40,9 @@ return array(
         ),
 
         'session' => array(
+            'class' => 'application.core.web.DbHttpSession',
+            'connectionID' => 'db',
+            'sessionTableName' => '{{sessions}}',
             'cookieParams' => array(
                 'httpOnly' => true,
                 'secure' => true, // Ensure cookies are sent over HTTPS
