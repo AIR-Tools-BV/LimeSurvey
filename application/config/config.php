@@ -41,8 +41,8 @@ return array(
 
         'cache'=>array(
             'class'=>'CRedisCache',
-            'hostname'=>'127.0.0.1',
-            'port'=>6379,
+            'hostname'=> getenv('REDIS_HOST'),
+            'port'=> getenv('REDIS_PORT'),
             'database'=>0,
             'options'=>STREAM_CLIENT_CONNECT,
         ),
