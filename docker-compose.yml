@@ -20,6 +20,8 @@ services:
       - DB_NAME=limesurvey
       - SERVER_NAME=localhost
       - PROTOCOL=http
+      - REDIS_PORT=6379
+      - REDIS_HOST=redis
 
 
 
@@ -34,6 +36,11 @@ services:
       - mariadb_data:/var/lib/mysql
     ports:
       - "3306:3306"
+
+  redis:
+    image: redis:latest
+    ports:
+      - "6379:6379"
 
 
 volumes:
