@@ -61,7 +61,7 @@ return array(
 
         'request' => array(
             // Enable CSRF Validation
-            'enableCsrfValidation' => true,
+            'enableCsrfValidation' => false,
             // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
             'csrfCookie' => array(
                 'sameSite' => 'Lax',
