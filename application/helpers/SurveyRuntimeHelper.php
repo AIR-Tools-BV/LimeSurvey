@@ -1362,20 +1362,25 @@ class SurveyRuntimeHelper
             }
 
             if (isset($this->aSurveyInfo['autoredirect']) && $this->aSurveyInfo['autoredirect'] == "Y" && $this->aSurveyInfo['surveyls_url']) {
-                // kill survey session before redirecting
-                if ($this->aSurveyInfo['printanswers'] != 'Y') {
-                    killSurveySession($this->iSurveyid);
-                }
                 //Automatically redirect the page to the "url" setting for the survey
                 $headToSurveyUrl = htmlspecialchars_decode($this->aSurveyInfo['surveyls_url']);
                 $actualRedirect = $headToSurveyUrl;
+                
                 if ($surveyActive) {
+                    // Set completion cookie before redirect to handle cross-pod scenarios in GKE
+                    $cookieName = "survey_{$this->iSurveyid}_completed";
+                    setcookie($cookieName, '1', time() + 300, '/', '', true, true); // 5 minute expiry, secure, httponly
+                    
                     header("Access-Control-Allow-Origin: *");
                     if (Yii::app()->request->getParam('ajax') == 'on') {
                         header("X-Redirect: " . $headToSurveyUrl, false, 302);
                     } else {
                         header("Location: " . $actualRedirect, false, 302);
                     }
+                    
+                    // Don't kill session immediately - let it expire naturally or be cleaned up later
+                    // This prevents session timeout errors when the redirect is followed
+                    // killSurveySession($this->iSurveyid);
                 }
                 $this->aSurveyInfo['aCompleted']['sSurveylsUrlDescriptionExta'] = gT("Note: Automatically loading the end URL works only if the survey is activated.");
             }
@@ -1388,7 +1393,10 @@ class SurveyRuntimeHelper
             $oTemplate = Template::getLastInstance();
             // kill survey session after doing template : didn't work for all var, but for EM core var : it's OK.
             if ($this->aSurveyInfo['printanswers'] != 'Y') {
-                killSurveySession($this->iSurveyid);
+                // Don't kill session if autoredirect is enabled - it's handled above to prevent race conditions
+                if (!isset($this->aSurveyInfo['autoredirect']) || $this->aSurveyInfo['autoredirect'] != 'Y' || !$this->aSurveyInfo['surveyls_url']) {
+                    killSurveySession($this->iSurveyid);
+                }
             }
             Yii::app()->twigRenderer->renderHtmlPage($sHtml, $oTemplate);
         }

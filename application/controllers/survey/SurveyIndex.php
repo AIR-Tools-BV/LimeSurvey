@@ -727,6 +727,17 @@ class SurveyIndex extends CAction
 
     private function didSessionTimeout($surveyid)
     {
+        // Don't consider it a timeout if the survey was recently completed (check cookie)
+        $completionCookie = "survey_{$surveyid}_completed";
+        if (isset($_COOKIE[$completionCookie]) && $_COOKIE[$completionCookie] == '1') {
+            return false;
+        }
+        
+        // Don't consider it a timeout if the survey was completed in the session
+        if (isset($_SESSION['survey_' . $surveyid]['completed']) && $_SESSION['survey_' . $surveyid]['completed'] === true) {
+            return false;
+        }
+        
         return (!isset($_SESSION['survey_' . $surveyid]['step']) && null !== App()->request->getPost('thisstep'));
     }
 
