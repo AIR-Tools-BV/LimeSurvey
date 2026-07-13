@@ -33,3 +33,18 @@ jobs:
           gcloud auth configure-docker europe-west1-docker.pkg.dev
           docker build -t europe-west1-docker.pkg.dev/$GOOGLE_PROJECT/air-tools/limesurvey:${{ steps.get_tag.outputs.TAG }} .
           docker push europe-west1-docker.pkg.dev/$GOOGLE_PROJECT/air-tools/limesurvey:${{ steps.get_tag.outputs.TAG }}
+
+      # Enforce the pod spec (resources/replicas/HPA) from source, THEN roll the new image.
+      # Applying the manifest is what keeps cpu:3 from silently reverting to cpu:1 on deploy.
+      # Requires the deploy SA to have roles/container.developer on the cluster.
+      - name: Deploy to GKE
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          TAG: ${{ steps.get_tag.outputs.TAG }}
+        run: |
+          gcloud container clusters get-credentials limesurvey \
+            --region europe-west1 --project "$GOOGLE_PROJECT"
+          kubectl -n default apply -f deploy/k8s/limesurvey.yaml
+          kubectl -n default set image deployment/limesurvey \
+            "limesurvey-sha256-1=europe-west1-docker.pkg.dev/${GOOGLE_PROJECT}/air-tools/limesurvey:${TAG}"
+          kubectl -n default rollout status deployment/limesurvey --timeout=300s
