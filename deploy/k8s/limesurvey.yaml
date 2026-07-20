@@ -1,7 +1,25 @@
+# ============================================================================
+# DEPRECATED — NOT THE LIVE DEPLOYMENT. Do not apply.
+#
+# survey.air-tools.nl moved to Cloud Run on 2026-07-20. The live spec is
+# ../cloudrun/service.yaml and CI deploys there (.github/workflows/gcr.yml).
+# Kept only until the GKE cluster is torn down; delete this file with it.
+#
+# Why: this cluster ran ONE single-replica pod (maxReplicas 1, Recreate strategy,
+# RWO volumes pinned to one zone) — none of Kubernetes' value was in use, but it
+# cost ~€220-280/mo vs ~€50-70/mo on Cloud Run. Measured pod usage was 0.038 cores
+# median against a 3.5 vCPU request, and a 200Gi PVC holding 80MB.
+# See ../cloudrun/README.md.
+#
+# NOTE: the limesurvey-secrets Secret referenced below was NEVER created in the
+# cluster — the live Deployment carried DB_PASSWORD as a plaintext literal. Cloud
+# Run reads it from Secret Manager instead. Rotate that password once GKE is gone.
+# ============================================================================
+#
 # LimeSurvey production deployment (survey.air-tools.nl)
 # Cluster: air-tools-prod-1cca1 / GKE Autopilot "limesurvey" (europe-west1) / namespace default
 #
-# THIS FILE IS THE SOURCE OF TRUTH for the pod's shape (resources, replicas, HPA).
+# THIS FILE WAS the source of truth for the pod's shape (resources, replicas, HPA).
 # Deploys MUST `kubectl apply -f` this file so live changes can't silently drift.
 # History: the pod repeatedly reverted to cpu:1 (1 core) because nothing was codified —
 # under launch traffic (FR/Cint) a single throttled Apache pod pegs its core and the

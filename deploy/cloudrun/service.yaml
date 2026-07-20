@@ -1,0 +1,182 @@
+# LimeSurvey on Cloud Run (survey.air-tools.nl)
+#
+# Replaces the GKE Autopilot deployment in ../k8s/limesurvey.yaml.
+# Same container image, same env vars, same 3-container shape (app + redis +
+# cloudsql-proxy) — Cloud Run sidecars share a network namespace, so the app
+# still reaches both on 127.0.0.1 and NO application/image change is required.
+#
+# Differences from GKE:
+#   - upload/{themes,plugins,admintheme} ship inside the image; only upload/surveys
+#     is durable storage, symlinked to a GCS bucket mounted at /mnt/uploads. The old
+#     200Gi RWO PVC held 80MB across 127 files.
+#   - DB password comes from Secret Manager, not a plaintext env literal.
+#   - No hard CPU cap equal to the request: Cloud Run lets the app burst, which
+#     is the actual fix for the admin-panel hangs that drove the 1->3 core bump.
+#   - Scales to zero. Ingress is Cloudflare -> a dedicated Google LB (serverless NEG)
+#     at 34.36.174.185; see README.md.
+#
+# Deploy:  gcloud run services replace deploy/cloudrun/service.yaml --region europe-west1
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: limesurvey
+  labels:
+    cloud.googleapis.com/location: europe-west1
+spec:
+  template:
+    metadata:
+      annotations:
+        # gen2 is required for GCS volume mounts
+        run.googleapis.com/execution-environment: gen2
+        # Traffic is bursty with hours/days of nothing, so scale to zero: idle
+        # min-instance time was ~EUR40/mo of CPU+memory bought for no traffic.
+        # startup-cpu-boost gives extra CPU during cold start to cut first-hit latency.
+        run.googleapis.com/startup-cpu-boost: "true"
+        # Scale to zero is safe here because sessions already live in the DB
+        # (DbHttpSession in application/config/config.php), not on local disk.
+        autoscaling.knative.dev/minScale: "0"
+        # Traffic is invite-driven and arrives in waves (the panel emails survey invites),
+        # so a single instance would make a whole wave queue behind one cold start.
+        # Costs nothing while idle since minScale is 0.
+        # Trade-off: redis is per-instance, so cached settings can be briefly stale across
+        # instances after an admin edit. Low risk for respondents; move the Yii cache to
+        # the DB (CDbCache) if that window ever matters.
+        autoscaling.knative.dev/maxScale: "4"
+        # App must not start before redis + the SQL proxy are listening
+        run.googleapis.com/container-dependencies: '{"limesurvey":["redis","cloudsql-proxy"]}'
+    spec:
+      serviceAccountName: limesurvey-run@air-tools-prod-1cca1.iam.gserviceaccount.com
+      timeoutSeconds: 900
+      containerConcurrency: 80
+      containers:
+        # ---- LimeSurvey (Apache/PHP) — the ingress container ----
+        - name: limesurvey
+          # Pinned by digest, not tag: a tag is mutable, and if `gcloud run services
+          # replace` runs before a push finishes it caches an "image not found" failure
+          # on a revision name it then reuses for identical specs — which cannot be
+          # deleted (it is the latest revision), so the service gets stuck.
+          # Digest = v0.0.112-cloudrun
+          image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey@sha256:5d3a9c9b067f581ba5e8517b5ab34df57f7777719973b4f37319f359b8a5c69b
+          ports:
+            - name: http1
+              containerPort: 80
+          # Rendering a survey stats/reads many small theme files. Served straight off
+          # gcsfuse each one is a network round-trip and a survey page took ~3.3s vs ~0.9s
+          # on GKE (gcsfuse metadata/file caches did NOT fix it — Cloud Run gives the file
+          # cache no cache-dir, so content reads always hit the network).
+          #
+          # themes/plugins/admintheme therefore ship INSIDE the image (committed to the
+          # repo under upload/). That also removed the ~6.8s boot-time copy off gcsfuse
+          # that dominated cold start, and means an admin theme edit is no longer silently
+          # lost on restart — they are versioned artifacts now, not mutable prod state.
+          #
+          # Only surveys/ (69MB of genuinely dynamic uploads) stays on the GCS mount, via
+          # a symlink so writes still persist across instances and restarts.
+          command: ["/bin/bash", "-c"]
+          args:
+            - |
+              set -e
+              rm -rf /var/www/html/upload/surveys
+              ln -sfn /mnt/uploads/surveys /var/www/html/upload/surveys
+              exec /usr/local/bin/start-apache
+          env:
+            - name: DB_HOST
+              value: "127.0.0.1"
+            - name: DB_PORT
+              value: "3306"
+            - name: DB_NAME
+              value: "limesurvey"
+            - name: DB_USERNAME
+              value: "limesurvey"
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  key: latest
+                  name: limesurvey-db-password
+            - name: SERVER_NAME
+              value: "survey.air-tools.nl"
+            # Pins Yii's absolute URLs/redirects to the public domain. Required because
+            # the Cloudflare Worker in front presents the *.run.app Host (Cloud Run routes
+            # by its own hostname and 404s on anything else). Without this, LimeSurvey
+            # builds redirects from that Host and bounces users off survey.air-tools.nl
+            # onto the raw *.run.app URL, leaking the origin and dropping cookies.
+            # (Origin Rules could rewrite Host instead, but that is Enterprise-only.)
+            - name: PUBLIC_URL
+              value: "https://survey.air-tools.nl"
+            - name: CACHE_DRIVER
+              value: "redis"
+            - name: REDIS_HOST
+              value: "127.0.0.1"
+            - name: REDIS_PORT
+              value: "6379"
+          volumeMounts:
+            - name: uploads
+              mountPath: /mnt/uploads
+          resources:
+            limits:
+              # Sized for CONCURRENCY, not average load. Aggregate CPU use is tiny
+              # (0.038 cores median), but a browser opening an admin page fires many
+              # PHP requests at once and Apache needs cores to run them in parallel.
+              # Measured at cpu:1 -> 8 concurrent renders took 4.29s vs 2.25s on the
+              # 3-core GKE pod (linear degradation = CPU-bound). 4 vCPU restores
+              # headroom above the pod. Cloud Run bills the SUM of all containers,
+              # but only while the instance is serving; idle min-instance time is
+              # billed at the much lower idle rate.
+              cpu: "4"
+              memory: 2Gi
+
+        # ---- Redis (per-instance Yii cache, same as the in-pod one) ----
+        - name: redis
+          image: redis:6.2
+          # Required: Cloud Run only honours container-dependencies when the
+          # depended-on container declares a startup probe.
+          startupProbe:
+            tcpSocket:
+              port: 6379
+            periodSeconds: 1
+            failureThreshold: 30
+          resources:
+            limits:
+              cpu: "0.25"
+              memory: 256Mi
+
+        # ---- Cloud SQL Auth Proxy v2 (keyless — uses the Cloud Run service account) ----
+        - name: cloudsql-proxy
+          image: gcr.io/cloud-sql-connectors/cloud-sql-proxy:2.11.4
+          args:
+            # Must bind 0.0.0.0, not 127.0.0.1: Cloud Run's startup probe reaches the
+            # container over its network interface, so a loopback-only listener never
+            # passes the probe (the proxy logs "ready" while the probe times out).
+            # This is not an exposure — the instance's network namespace is private and
+            # only the ingress container's port is reachable from outside.
+            - "--address=0.0.0.0"
+            - "--port=3306"
+            - "--structured-logs"
+            - "air-tools-prod-1cca1:europe-west1:limesurvey-v2"
+          startupProbe:
+            tcpSocket:
+              port: 3306
+            periodSeconds: 1
+            failureThreshold: 30
+          resources:
+            limits:
+              cpu: "0.25"
+              memory: 256Mi
+
+      volumes:
+        - name: uploads
+          csi:
+            driver: gcsfuse.run.googleapis.com
+            volumeAttributes:
+              bucketName: air-tools-limesurvey-uploads
+              # Rendering a survey makes Twig stat/read many small theme files. Untuned,
+              # every one is a network round-trip and a survey page took 3.3s vs 0.9s on
+              # GKE. These caches trade freshness for latency: theme/plugin files change
+              # only when an admin edits them, so a 300s metadata TTL is acceptable.
+              # NOTE: implicit-dirs alone is NOT enough — empty directories don't exist in
+              # GCS at all, so the tree also needs explicit "dir/" marker objects
+              # (see sync-uploads.sh). Without them Twig throws LoaderError.
+              mountOptions: implicit-dirs=true,metadata-cache-ttl-secs=300,stat-cache-max-size-mb=64,type-cache-max-size-mb=16,file-cache-max-size-mb=512
+  traffic:
+    - percent: 100
+      latestRevision: true
