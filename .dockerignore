@@ -1,0 +1,16 @@
+# The Dockerfile does `COPY . .`, so anything not excluded here is baked into an
+# image layer. `.git` alone was ~879MB on disk (~180MB of the 498MB image): it was
+# copied in and then masked by `rm -rf .git`, which does NOT shrink the earlier
+# layer — so every cold start pulled it for nothing.
+#
+# NOTE: node_modules is deliberately NOT excluded. It is referenced at runtime by
+# application/core/LSYii_AssetManager.php and application/config/vendor.php.
+.git
+.github
+.idea
+.DS_Store
+**/.DS_Store
+logs
+deploy
+tests
+docs

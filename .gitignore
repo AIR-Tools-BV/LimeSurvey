@@ -228,3 +228,11 @@ docker/
 /geckodriver-v0.23.0-linux64.tar.gz
 /yarn.lock
 /geckodriver.exe
+
+# --- Cloud Run migration (2026-07): these upload dirs ship INSIDE the image ---
+# Rendering a survey makes Twig stat/read many small theme files; serving them from the
+# GCS mount made a survey page ~4x slower, so themes/plugins/admintheme are baked into
+# the image and only upload/surveys/ stays on the mount. They are force-added
+# (`git add -f`) past the /upload/* rules above and stay tracked from then on.
+# If you add a NEW theme or plugin, force-add it too or the image will ship without it
+# and LimeSurvey will throw Twig\Error\LoaderError at render time.
