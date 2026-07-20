@@ -41,13 +41,29 @@ spec:
         # Trade-off: redis is per-instance, so cached settings can be briefly stale across
         # instances after an admin edit. Low risk for respondents; move the Yii cache to
         # the DB (CDbCache) if that window ever matters.
-        autoscaling.knative.dev/maxScale: "4"
+        # maxScale x containerConcurrency is a HARD ceiling: at 20x10 a 200-concurrent
+        # burst returned 429s. 40x10 = 400 in-flight, and the DB has max_connections=1000
+        # so Cloud SQL is not the limit. Costs nothing at rest because minScale is 0.
+        autoscaling.knative.dev/maxScale: "40"
         # App must not start before redis + the SQL proxy are listening
+        # Keep a browser pinned to one instance. Belt-and-braces with the boot-time asset
+        # warm-up: affinity alone did NOT fix the /tmp/assets 404s, and the warm-up only
+        # publishes the bundles used by the pages it hits, so deeper admin screens still
+        # benefit from landing on the instance that already published their assets.
+        # NOTE: this MUST live in the YAML — `gcloud run services replace` silently drops
+        # any setting applied out-of-band with `gcloud run services update`.
+        run.googleapis.com/sessionAffinity: "true"
         run.googleapis.com/container-dependencies: '{"limesurvey":["redis","cloudsql-proxy"]}'
     spec:
       serviceAccountName: limesurvey-run@air-tools-prod-1cca1.iam.gserviceaccount.com
       timeoutSeconds: 900
-      containerConcurrency: 80
+      # CRITICAL for a CPU-bound PHP app: this is the number of requests Cloud Run packs
+      # onto ONE instance before starting another. At the default 80 a 100-concurrent
+      # invite wave stayed on a SINGLE instance — 80 PHP requests sharing 4 vCPU (~0.05
+      # each) produced p95 = 50s and a 503, while instance_count sat at 1. Autoscaling is
+      # driven by this number, not by CPU. 10 keeps ~0.4 vCPU per in-flight request and
+      # makes Cloud Run scale out instead of queueing.
+      containerConcurrency: 10
       containers:
         # ---- LimeSurvey (Apache/PHP) — the ingress container ----
         - name: limesurvey
@@ -78,7 +94,30 @@ spec:
               set -e
               rm -rf /var/www/html/upload/surveys
               ln -sfn /mnt/uploads/surveys /var/www/html/upload/surveys
-              exec /usr/local/bin/start-apache
+
+              # ---- publish Yii assets at BOOT, on every instance ----
+              # Yii copies CSS/JS into /tmp/assets/<hash>/ lazily, on whichever instance
+              # renders a page. That path is per-instance in-memory storage, so with more
+              # than one instance a browser's asset requests can land on an instance that
+              # has not published yet -> 404 -> completely unstyled pages. (Observed: 15 of
+              # 32 admin assets 404'd at containerConcurrency 10; forcing a single instance
+              # fixed it 31/31.) Session affinity alone was NOT sufficient.
+              #
+              # So each instance renders the key pages against itself once at startup,
+              # which publishes the shared bundles before it serves any real traffic.
+              # Everything is best-effort: a failed warm-up must never stop the container.
+              /usr/local/bin/start-apache &
+              APACHE_PID=$!
+              for i in $(seq 1 40); do
+                php -r 'exit(@file_get_contents("http://127.0.0.1/") === false ? 1 : 0);' && break
+                sleep 1
+              done
+              for u in "/" "/index.php/admin/authentication/sa/login" "/index.php/admin"; do
+                php -r '$c=stream_context_create(["http"=>["timeout"=>25,"ignore_errors"=>true]]);
+                        @file_get_contents("http://127.0.0.1'"$u"'",false,$c);' >/dev/null 2>&1 || true
+              done
+              echo "asset warm-up complete"
+              wait $APACHE_PID
           env:
             - name: DB_HOST
               value: "127.0.0.1"
