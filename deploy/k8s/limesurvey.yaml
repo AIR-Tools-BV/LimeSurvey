@@ -1,0 +1,174 @@
+# ============================================================================
+# DEPRECATED — NOT THE LIVE DEPLOYMENT. Do not apply.
+#
+# survey.air-tools.nl moved to Cloud Run on 2026-07-20. The live spec is
+# ../cloudrun/service.yaml and CI deploys there (.github/workflows/gcr.yml).
+# Kept only until the GKE cluster is torn down; delete this file with it.
+#
+# Why: this cluster ran ONE single-replica pod (maxReplicas 1, Recreate strategy,
+# RWO volumes pinned to one zone) — none of Kubernetes' value was in use, but it
+# cost ~€220-280/mo vs ~€50-70/mo on Cloud Run. Measured pod usage was 0.038 cores
+# median against a 3.5 vCPU request, and a 200Gi PVC holding 80MB.
+# See ../cloudrun/README.md.
+#
+# NOTE: the limesurvey-secrets Secret referenced below was NEVER created in the
+# cluster — the live Deployment carried DB_PASSWORD as a plaintext literal. Cloud
+# Run reads it from Secret Manager instead. Rotate that password once GKE is gone.
+# ============================================================================
+#
+# LimeSurvey production deployment (survey.air-tools.nl)
+# Cluster: air-tools-prod-1cca1 / GKE Autopilot "limesurvey" (europe-west1) / namespace default
+#
+# THIS FILE WAS the source of truth for the pod's shape (resources, replicas, HPA).
+# Deploys MUST `kubectl apply -f` this file so live changes can't silently drift.
+# History: the pod repeatedly reverted to cpu:1 (1 core) because nothing was codified —
+# under launch traffic (FR/Cint) a single throttled Apache pod pegs its core and the
+# admin panel hangs. See deploy/k8s/README.md.
+#
+# NOTE ON SCALE-OUT: the upload/config PVCs are ReadWriteOnce and Redis is an in-pod
+# cache, so this app is single-replica by design (strategy: Recreate, HPA min=max=1).
+# Capacity is scaled VERTICALLY (pod CPU), not horizontally. Horizontal scaling would
+# first require RWX (Filestore) volumes + an external/shared Redis.
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: limesurvey
+  namespace: default
+  labels:
+    app: limesurvey
+spec:
+  replicas: 1
+  revisionHistoryLimit: 10
+  selector:
+    matchLabels:
+      app: limesurvey
+  strategy:
+    type: Recreate            # RWO volumes: old pod must release the disk before the new one mounts
+  template:
+    metadata:
+      labels:
+        app: limesurvey
+      annotations:
+        cluster-autoscaler.kubernetes.io/safe-to-evict: "false"
+    spec:
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: topology.kubernetes.io/zone
+                operator: In
+                values: ["europe-west1-d"]   # pinned to the zone of the RWO PVCs
+            - matchExpressions:
+              - key: cloud.google.com/extended-duration-pods
+                operator: In
+                values: ["1500m", "X"]
+      containers:
+      # ---- Redis (in-pod cache for LimeSurvey; NOT shared across pods) ----
+      - name: redis
+        image: redis:6.2
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 6379
+          protocol: TCP
+        resources:
+          requests: { cpu: 250m, memory: 512Mi, ephemeral-storage: 1Gi }
+          limits:   { cpu: 250m, memory: 512Mi, ephemeral-storage: 1Gi }
+        securityContext:
+          capabilities:
+            drop: ["NET_RAW"]
+
+      # ---- LimeSurvey (Apache/PHP) ----
+      # CPU raised 1 -> 3 cores. This is the fix for the admin-panel overload:
+      # Apache runs up to 150 workers (MaxRequestWorkers) and was hard-capped at a single
+      # core. 3 cores fits the current e2-standard-4 Autopilot node (no node-size/cost jump).
+      - name: limesurvey-sha256-1
+        image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:v0.0.109
+        imagePullPolicy: IfNotPresent
+        ports:
+        - containerPort: 80
+          protocol: TCP
+        env:
+        - name: DB_HOST
+          value: "127.0.0.1"
+        - name: DB_NAME
+          value: "limesurvey"
+        - name: DB_USERNAME
+          value: "limesurvey"
+        - name: DB_PASSWORD                 # moved OUT of the manifest into a Secret (was inline plaintext)
+          valueFrom:
+            secretKeyRef:
+              name: limesurvey-secrets
+              key: db-password
+        - name: SERVER_NAME
+          value: "survey.air-tools.nl"
+        - name: CACHE_DRIVER
+          value: "redis"
+        - name: REDIS_HOST
+          value: "127.0.0.1"
+        - name: REDIS_PORT
+          value: "6379"
+        resources:
+          requests: { cpu: "3", memory: 4Gi, ephemeral-storage: 1Gi }
+          limits:   { cpu: "3", memory: 4Gi, ephemeral-storage: 1Gi }
+        securityContext:
+          capabilities:
+            drop: ["NET_RAW"]
+        volumeMounts:
+        - name: limesurvey-persistent-storage
+          mountPath: /var/www/html/upload
+        - name: limesurvey-config-persistent-storage
+          mountPath: /var/www/html/config2
+
+      # ---- Cloud SQL Auth Proxy (to limesurvey-v2) ----
+      - name: cloudsql-proxy
+        image: gcr.io/cloudsql-docker/gce-proxy:1.33.2
+        imagePullPolicy: IfNotPresent
+        command:
+        - /cloud_sql_proxy
+        - -instances=air-tools-prod-1cca1:europe-west1:limesurvey-v2=tcp:3306
+        - -credential_file=/secrets/cloudsql/key.json
+        resources:
+          requests: { cpu: 250m, memory: 512Mi, ephemeral-storage: 128Mi }
+          limits:   { cpu: 250m, memory: 512Mi, ephemeral-storage: 128Mi }
+        securityContext:
+          allowPrivilegeEscalation: false
+          runAsUser: 2
+          capabilities:
+            drop: ["NET_RAW"]
+        volumeMounts:
+        - name: cloudsql-instance-credentials
+          mountPath: /secrets/cloudsql
+          readOnly: true
+      volumes:
+      - name: limesurvey-persistent-storage
+        persistentVolumeClaim:
+          claimName: limesurvey-volumeclaim
+      - name: limesurvey-config-persistent-storage
+        persistentVolumeClaim:
+          claimName: limesurvey-config-volumeclaim
+      - name: cloudsql-instance-credentials
+        secret:
+          secretName: cloudsql-instance-credentials
+          defaultMode: 420
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: limesurvey
+  namespace: default
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: limesurvey
+  minReplicas: 1
+  maxReplicas: 1          # single-replica by design (RWO volumes + in-pod Redis). Do NOT raise
+                          # without first moving to RWX volumes + shared Redis.
+  metrics:
+  - type: Resource
+    resource:
+      name: cpu
+      target:
+        type: Utilization
+        averageUtilization: 80

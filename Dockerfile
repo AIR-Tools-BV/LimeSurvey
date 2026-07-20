@@ -20,7 +20,19 @@ WORKDIR /var/www/html
 
 COPY . .
 
-RUN rm -r .git && \
+# Create the runtime dirs explicitly instead of relying on them surviving the build
+# context. .gitignore carries `/tmp/*` with only narrow negations, and `gcloud builds
+# submit` derives its ignore rules from .gitignore when no .gcloudignore exists — so
+# tmp/runtime silently vanished and Yii failed every request with
+#   Application runtime path "/var/www/html/tmp/runtime" is not valid.
+# (`docker build` locally/in CI uses .dockerignore and did not hit this, which is
+# exactly why it is worth making the image self-sufficient.)
+RUN mkdir -p /var/www/html/tmp/runtime \
+             /var/www/html/tmp/assets \
+             /var/www/html/tmp/upload \
+             /var/www/html/tmp/sessions \
+             /var/www/html/upload && \
+    rm -rf .git && \
     chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 777 /var/www/html/tmp && \

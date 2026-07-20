@@ -59,14 +59,27 @@ return array(
             // Other session configurations...
         ),
 
-        'request' => array(
-            // Enable CSRF Validation
-            'enableCsrfValidation' => true,
-            // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
-            'csrfCookie' => array(
-                'sameSite' => 'Lax',
-                'secure' => true,
+        // PUBLIC_URL pins the hostname Yii uses to build absolute URLs and redirects.
+        //
+        // Needed when a proxy presents a different Host. Cloudflare fronts this site and a
+        // Worker forwards to the *.run.app origin (Cloud Run routes by its own hostname and
+        // 404s on anything else). Without hostInfo, Yii derives absolute URLs from that
+        // Host, so e.g. /index.php/admin would redirect users off survey.air-tools.nl onto
+        // the raw *.run.app URL — leaking the origin and dropping session/CSRF cookies
+        // scoped to the public domain.
+        //
+        // Left unset, behaviour is unchanged (Yii derives it from the request).
+        'request' => array_merge(
+            array(
+                // Enable CSRF Validation
+                'enableCsrfValidation' => true,
+                // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
+                'csrfCookie' => array(
+                    'sameSite' => 'Lax',
+                    'secure' => true,
+                ),
             ),
+            getenv('PUBLIC_URL') ? array('hostInfo' => getenv('PUBLIC_URL')) : array()
         ),
 
         'urlManager' => array(

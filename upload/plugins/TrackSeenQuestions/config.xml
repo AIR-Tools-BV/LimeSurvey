@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<config>
+    <metadata>
+        <name>TrackSeenQuestions</name>
+        <type>plugin</type>
+        <creationDate>2024-10-10</creationDate>
+        <last_update>2024-10-10</last_update>
+        <author>Wouter Bijen (Transformers group)</author>
+        <authorUrl>https://gitlab.com/transformers-group/AirTools/</authorUrl>
+        <supportUrl>https://gitlab.com/transformers-group/AirTools/</supportUrl>
+        <copyright>Copyright (C) 2024 Transformers Group.</copyright>
+        <license>-</license>
+        <version>1.0.1</version>
+        <description><![CDATA[Tracks if questions are seen by the respondent]]></description>
+    </metadata>
+
+    <compatibility>
+        <version>6.0</version>
+        <version>5.0</version>
+        <version>4.0</version>
+        <version>3.0</version>
+    </compatibility>
+    <updaters disabled="disabled"></updaters>
+
+</config>

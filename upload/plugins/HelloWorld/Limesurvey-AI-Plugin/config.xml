@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    A customization of the 5-point-choice question template to insert emojis.
+-->
+
+<config>
+    <!-- Those metadata will be displayed in the template configuration page. They are not used for now. -->
+    <metadata>
+        <name>HelloWorld</name>
+        <type>question_theme</type>
+        <title>5 Point Emojis</title>
+        <creationDate>2019-12-18 08:00</creationDate>
+        <lastUpdate>2023-01-17 08:00</lastUpdate>
+        <author>Tony Partner</author>
+        <authorUrl>http://partnersurveys.com</authorUrl>
+        <supportUrl>None</supportUrl>
+        <license>GNU General Public License version 2 or later</license>
+        <version>1.0</version>
+        <apiVersion>1</apiVersion>
+        <lastSecurityUpdate>1.0</lastSecurityUpdate>
+        <description>A 5-point emoji question</description>
+        <questionType>5</questionType>
+        <group>Single choice questions</group>
+        <subquestions>0</subquestions>
+        <answerscales>0</answerscales>
+        <hasdefaultvalues>0</hasdefaultvalues>
+        <assessable>0</assessable>
+    </metadata>
+
+    <compatibility>
+        <version>3.0</version>
+        <version>4.0</version>
+        <version>5.0</version>
+        <version>6.0</version>
+    </compatibility>
+
+
+
+</config>
