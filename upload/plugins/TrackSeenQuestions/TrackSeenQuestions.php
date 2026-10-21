@@ -16,8 +16,12 @@ class TrackSeenQuestions extends PluginBase
     public function afterSurveyComplete()
     {
         $surveyId = $this->event->get('surveyId');
+        // Only set for active surveys; a preview has no response to attach seen questions to.
+        $responseId = $this->event->get('responseId');
+        if (!$responseId) {
+            return;
+        }
         $questions = Question::model()->findAllByAttributes(['sid' => $surveyId], ['order' => 'parent_qid ASC']);
-        $responseId = $this->getResponseId($surveyId);
         $relevantQuestionIds = [];
     
         foreach ($questions as $question) {
@@ -42,25 +46,27 @@ class TrackSeenQuestions extends PluginBase
 
     public function newUnsecureRequest()
     {
+        // Every plugin receives this event, so ignore requests meant for another plugin.
+        if (Yii::app()->request->getQuery('plugin') !== 'TrackSeenQuestions') {
+            return;
+        }
         if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
             throw new CHttpException(405, 'Only POST requests are allowed.');
         }
-
-        $request = Yii::app()->request;
-        if ($request->getQuery('function') === 'exportSeenQuestions') {
+        if (Yii::app()->request->getQuery('function') === 'exportSeenQuestions') {
+            if (!$this->hasValidExportKey()) {
+                $this->sendErrorResponse(401, 'Invalid export key.');
+            }
             $this->exportSeenQuestionsAsCsv();
         }
     }
 
-    public function getResponseId($surveyId)
+    // Uses the AirTools export key: the same Airflow job calls both plugins.
+    private function hasValidExportKey()
     {
-        $iRespondeId = (isset($_SESSION["survey_{$surveyId}"]['srid'])) ? $_SESSION["survey_{$surveyId}"]['srid'] : null;
-        if ($iRespondeId) {
-            return $iRespondeId;
-        }
-        $sSessionToken = (isset($_SESSION["survey_{$surveyId}"]['token'])) ? $_SESSION["survey_{$surveyId}"]['token'] : null;
-        $oResponse = SurveyDynamic::model($surveyId)->find("token =:token", array(':token' => $sSessionToken));
-        return ($oResponse) ? $oResponse->id : null;
+        $airTools = Yii::app()->getPluginManager()->loadPlugin('AirTools');
+        $exportKey = $_SERVER['HTTP_X_EXPORT_KEY'] ?? '';
+        return $airTools !== null && $airTools->isValidExportKey($exportKey);
     }
 
     // Function to log that a question was seen

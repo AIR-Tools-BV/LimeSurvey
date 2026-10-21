@@ -1,6 +1,5 @@
 <?php
 require_once 'TransformersApiClient.php';
-require_once 'helper_functions.php';
 
 class AirTools extends \PluginBase
 {
@@ -361,7 +360,15 @@ class AirTools extends \PluginBase
         $iMinimum = SurveyDynamic::model($surveyId)->getMinId();
         Yii::app()->loadHelper('common');
         Yii::app()->loadHelper('admin/exportresults');
-        $filter = $after ? "submitdate >= '$after' OR submitdate = '1980-01-01 00:00:00'" : '';
+        $filter = '';
+        if ($after) {
+            // The export service only takes a raw SQL condition, so accept nothing but a timestamp.
+            $afterDate = is_string($after) ? DateTime::createFromFormat('Y-m-d H:i:s', $after) : false;
+            if (!$afterDate || $afterDate->format('Y-m-d H:i:s') !== $after) {
+                $this->sendErrorResponse(400, 'savedAfter must be formatted as Y-m-d H:i:s.');
+            }
+            $filter = "submitdate >= '" . $afterDate->format('Y-m-d H:i:s') . "' OR submitdate = '1980-01-01 00:00:00'";
+        }
         //avoid rendomization of the fieldmap
         killSurveySession($surveyId);
         // Get info about the survey
@@ -779,7 +786,7 @@ class AirTools extends \PluginBase
         }
         $settings = parent::getPluginSettings($getValues);
         if (!isset($settings['export_key']['current'])) {
-            $settings['export_key']['current'] = generateRandomString(48);
+            $settings['export_key']['current'] = bin2hex(random_bytes(24));
             $this->set('export_key', $settings['export_key']['current']);
         }
         $url_analytics = Yii::app()->createUrl('plugins/direct', ['plugin' => 'AirTools', 'function' => 'analyticsPage']);
@@ -1173,11 +1180,20 @@ class AirTools extends \PluginBase
     private function hasValidExportKey()
     {
         $headers = $this->getHeadersFromServer();
-        $exportKey = $headers['X-EXPORT-KEY'] ?? null;
-        if ($exportKey !== $this->get('export_key')) {
+        if (!$this->isValidExportKey($headers['X-EXPORT-KEY'] ?? '')) {
             $this->sendErrorResponse(401, 'Invalid export key.');
         }
         return true;
+    }
+
+    /**
+     * Public so TrackSeenQuestions can guard its export with the same key: one Airflow job calls both.
+     */
+    public function isValidExportKey($exportKey)
+    {
+        $storedKey = (string) $this->get('export_key');
+        // An unset key must refuse, not match an absent header.
+        return $storedKey !== '' && is_string($exportKey) && hash_equals($storedKey, $exportKey);
     }
 
     private function handleAuthenticateStatistics()
