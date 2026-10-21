@@ -1,6 +1,6 @@
 # LimeSurvey on Cloud Run
 
-Replaces the GKE Autopilot deployment in `../k8s/limesurvey.yaml`.
+Replaced the earlier GKE Autopilot deployment (removed from the repo).
 
 ## Why we moved
 
@@ -36,12 +36,10 @@ Update the `image:` tag in `service.yaml` and re-run the command above.
 
 ## Shape
 
-Three containers, mirroring the old pod. Cloud Run sidecars share a network namespace,
-so the app still reaches Redis and the SQL proxy on `127.0.0.1` and **the application
-needs no code or config change** — Cloud Run serves the container on port 80 directly.
+Two containers. Cloud Run sidecars share a network namespace, so the app reaches the
+SQL proxy on `127.0.0.1`. Cloud Run serves the container on port 80 directly.
 
 - `limesurvey` — Apache/PHP, the ingress container
-- `redis` — per-instance Yii cache (as it was in-pod)
 - `cloudsql-proxy` — v2, keyless via the `limesurvey-run` service account
 
 Autoscaling is `min=0 / max=4`: traffic is invite-driven and bursty, with hours or days
@@ -127,9 +125,24 @@ redirects from a proxy-supplied hostname.
 4. Only then delete the cluster, the PVCs, the old ingress/forwarding rules, the
    `34.149.196.180` address and the `limesurvey-kubernetes` service account.
 
+## Encryption keys
+
+LimeSurvey encrypts fields marked "encrypted" with two keys. `config.php` reads them from
+`ENCRYPTION_NONCE` and `ENCRYPTION_SECRETBOX_KEY` and refuses to start without them.
+Without fixed keys every instance generated its own, so data encrypted on one instance
+could not be read on another. Create the secrets once, before the first deploy that needs them:
+
+```sh
+python3 -c "import secrets;print(secrets.token_hex(24),end='')" | gcloud secrets create limesurvey-encryption-nonce --data-file=-
+python3 -c "import secrets;print(secrets.token_hex(32),end='')" | gcloud secrets create limesurvey-encryption-secretbox-key --data-file=-
+```
+
+Grant `limesurvey-run@air-tools-prod-1cca1.iam.gserviceaccount.com` the Secret Accessor role on both.
+Never change these values once data is encrypted with them.
+
 ## Note on secrets
 
-`deploy/k8s/limesurvey.yaml` declared `DB_PASSWORD` via a `limesurvey-secrets` Secret,
+The old GKE manifest declared `DB_PASSWORD` via a `limesurvey-secrets` Secret,
 but **that Secret was never created** — the live Deployment carried the password as a
 plaintext literal in the pod spec, readable by anyone with cluster read access. Cloud Run
 reads it from Secret Manager (`limesurvey-db-password`) instead. Rotate the password once

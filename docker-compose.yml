@@ -1,29 +1,24 @@
-version: '3.8'
-
+# Local stack only. Production runs on Cloud Run, see deploy/cloudrun.
 services:
   limesurvey:
-#    image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:v0.0.74
     build: .
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       - mariadb
     volumes:
-#      - limesurvey_tmp:/var/www/html/tmp
-      - limesurvey_upload:/var/www/html/upload
-#      - limesurvey_config:/var/www/html/application/config
+      # Only survey uploads are mutable. Themes and plugins come from the image, like on Cloud Run.
+      - limesurvey_surveys:/var/www/html/upload/surveys
     environment:
       - DB_HOST=mariadb
-      - DB_USERNAME=limesurvey
-      - DB_PASSWORD=limesurvey
       - DB_PORT=3306
       - DB_NAME=limesurvey
+      - DB_USERNAME=limesurvey
+      - DB_PASSWORD=limesurvey
       - SERVER_NAME=localhost
-      - PROTOCOL=http
-      - REDIS_PORT=6379
-      - REDIS_HOST=redis
-
-
+      # Local-only keys. Production keys live in Secret Manager.
+      - ENCRYPTION_NONCE=8819af4d950b25d430d6713c7975e1f03a3e13bf50366693
+      - ENCRYPTION_SECRETBOX_KEY=90c7667215cda04ce0e49c1f85c2307fe1c4abeddac37a7fb6348801c037904c
 
   mariadb:
     image: mariadb:11.4.2
@@ -34,17 +29,7 @@ services:
       - MYSQL_PASSWORD=limesurvey
     volumes:
       - mariadb_data:/var/lib/mysql
-    ports:
-      - "3306:3306"
-
-  redis:
-    image: redis:latest
-    ports:
-      - "6379:6379"
-
 
 volumes:
   mariadb_data:
-#  limesurvey_tmp:
-  limesurvey_upload:
-#  limesurvey_config:
+  limesurvey_surveys:
