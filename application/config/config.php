@@ -31,8 +31,9 @@ return array(
             'tablePrefix' => 'lime_',
         ),
 
-        // Sessions in the DB, so any instance can serve any request.
-        'session' => array(
+        // Sessions in the DB, so any instance can serve any request. Web only: the console
+        // swaps in ConsoleHttpSession, which rejects these keys and crashed updatedb's error handler.
+        'session' => PHP_SAPI === 'cli' ? array() : array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
