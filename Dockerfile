@@ -1,4 +1,6 @@
-FROM php:8.1.30-apache
+# 8.3.36 fixes PHP2Shell (CVE-2026-109618, CVE-2026-109619). 8.1 is EOL and gets no fix.
+# bookworm is pinned because the imap extension needs libc-client-dev, which trixie dropped.
+FROM php:8.3.36-apache-bookworm
 
 # Enable mod_remoteip and configure
 RUN a2enmod remoteip && \
@@ -30,14 +32,12 @@ COPY . .
 RUN mkdir -p /var/www/html/tmp/runtime \
              /var/www/html/tmp/assets \
              /var/www/html/tmp/upload \
-             /var/www/html/tmp/sessions \
              /var/www/html/upload && \
     rm -rf .git && \
     chown -R www-data:www-data /var/www/html && \
     chmod -R 755 /var/www/html && \
     chmod -R 777 /var/www/html/tmp && \
-    chmod -R 777 /var/www/html/upload && \
-    chmod -R 777 /var/www/html/application/config
+    chmod -R 777 /var/www/html/upload
 
 RUN apt update && \
     apt install -y libpng-dev libjpeg-dev libfreetype6-dev libicu-dev libldap2-dev libzip-dev libc-client-dev libkrb5-dev && \
@@ -50,12 +50,11 @@ RUN apt update && \
 
 EXPOSE 80
 
-RUN echo "memory_limit = 16G" >> $PHP_INI_DIR/php.ini && \
+RUN echo "memory_limit = 512M" >> $PHP_INI_DIR/php.ini && \
     echo "upload_tmp_dir = /var/www/html/tmp" >>  $PHP_INI_DIR/php.ini && \
     echo "upload_max_filesize = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "post_max_size = 500M" >> $PHP_INI_DIR/php.ini && \
     echo "max_input_vars = 10000" >> $PHP_INI_DIR/php.ini && \
-#    echo "session.save_path = /var/www/html/tmp" >> $PHP_INI_DIR/php.ini && \
     echo "output_buffering = On" >> $PHP_INI_DIR/php.ini
 
 # Create a script to set ServerName dynamically
@@ -74,7 +73,7 @@ RUN chmod +x /usr/local/bin/start-apache
 # Add custom Apache configuration for KeepAlive
 RUN echo 'KeepAlive On\n\
 MaxKeepAliveRequests 100\n\
-KeepAliveTimeout 1' >> /etc/apache2/apache2.conf \
+KeepAliveTimeout 1' >> /etc/apache2/apache2.conf
 
 # Add custom Apache configuration
 RUN echo '<IfModule mpm_event_module>\n\

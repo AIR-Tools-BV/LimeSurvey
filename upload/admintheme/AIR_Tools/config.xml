@@ -20,6 +20,7 @@
     </metadata>
 
     <compatibility>
+        <version>7.0</version>
         <version>6.0</version>
     </compatibility>
 
@@ -30,6 +31,7 @@
     <files>
         <css>
             <filename>air_tools.css</filename>
+            <filename>air_tools-overrides.css</filename>
         </css>
 
         <js></js>
@@ -45,6 +47,7 @@
             <css>
                 <!-- Still need these files -->
                 <filename>air_tools-rtl.css</filename>
+                <filename>air_tools-overrides.css</filename>
             </css>
             <js>
             </js>

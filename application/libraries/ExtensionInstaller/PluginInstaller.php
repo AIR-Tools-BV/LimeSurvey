@@ -4,6 +4,7 @@ namespace LimeSurvey\ExtensionInstaller;
 
 use Exception;
 use InvalidArgumentException;
+use LimeSurvey\PluginManager\PluginManager;
 
 /**
  * @since 2018-09-24
@@ -23,6 +24,7 @@ class PluginInstaller extends ExtensionInstaller
      * @return void
      * @throws Exception
      */
+    #[\Override]
     public function install()
     {
         if (empty($this->fileFetcher)) {
@@ -38,12 +40,12 @@ class PluginInstaller extends ExtensionInstaller
         $destdir = $pluginManager->getPluginFolder($config, $this->pluginType);
 
         if ($this->fileFetcher->move($destdir)) {
-            list($result, $errorMessage) = $pluginManager->installUploadedPlugin($destdir);
-            if ($result) {
-                // Do nothing.
-            } else {
+            [$result, $errorMessage] = $pluginManager->installUploadedPlugin($destdir);
+            if (!$result) {
                 throw new Exception($errorMessage);
             }
+            // Remove temporary files.
+            $this->fileFetcher->abort();
         } else {
             throw new Exception('Could not move files.');
         }
@@ -55,6 +57,7 @@ class PluginInstaller extends ExtensionInstaller
      * @return void
      * @throws Exception
      */
+    #[\Override]
     public function update()
     {
         if (empty($this->fileFetcher)) {
@@ -78,6 +81,8 @@ class PluginInstaller extends ExtensionInstaller
         if ($this->fileFetcher->move($destdir)) {
             $plugin->version = $config->getVersion();
             $plugin->update();
+            // Remove temporary files.
+            $this->fileFetcher->abort();
         } else {
             throw new Exception('Could not move files.');
         }
@@ -86,6 +91,7 @@ class PluginInstaller extends ExtensionInstaller
     /**
      * @todo
      */
+    #[\Override]
     public function uninstall()
     {
         throw new Exception('Not implemented');

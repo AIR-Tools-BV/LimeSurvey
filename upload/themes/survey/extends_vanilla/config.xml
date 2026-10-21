@@ -23,6 +23,7 @@
     <extends>vanilla</extends></metadata>
 
     <compatibility>
+        <version>7.0</version>
         <version>6.0</version>
     </compatibility>
 

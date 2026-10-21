@@ -18,14 +18,29 @@ class SurveyDeactivate
     private Permission $permission;
     private SurveyDeactivator $surveyDeactivator;
     private LSYii_Application $app;
-    /** @Inject("archivedTokenSettings") */
+    #[\DI\Attribute\Inject('archivedTokenSettings')]
     private ArchivedTableSettings $archivedTokenSettings;
-    /** @Inject("archivedTimingsSettings") */
+    #[\DI\Attribute\Inject('archivedTimingsSettings')]
     private ArchivedTableSettings $archivedTimingsSettings;
-    /** @Inject("archivedResponseSettings") */
+    #[\DI\Attribute\Inject('archivedResponseSettings')]
     private ArchivedTableSettings $archivedResponseSettings;
     private SurveyLink $surveyLink;
     private SavedControl $savedControl;
+
+    public function setArchivedResponseSettings(ArchivedTableSettings $archivedResponseSettings)
+    {
+        $this->archivedResponseSettings = $archivedResponseSettings;
+    }
+
+    public function setArchivedTokenSettings(ArchivedTableSettings $archivedTokenSettings)
+    {
+        $this->archivedTokenSettings = $archivedTokenSettings;
+    }
+
+    public function setArchivedTimingsSettings(ArchivedTableSettings $archivedTimingsSettings)
+    {
+        $this->archivedTimingsSettings = $archivedTimingsSettings;
+    }
 
     public function __construct(
         Survey $survey,
@@ -44,14 +59,32 @@ class SurveyDeactivate
     }
 
     /**
+     * Gets a string of the form of <sid>_<timestamp>
+     * @param int $iSurveyID
+     * @return string
+     */
+    protected function getSiddate(int $iSurveyID): string
+    {
+        $timestamp = time();
+        do {
+            $siddate = "{$iSurveyID}_" . date('YmdHis', $timestamp++);
+            $tableName = $this->app->db->tablePrefix . "old_responses_{$siddate}";
+        } while ($this->app->db->schema->getTable($tableName, true) !== null);
+
+        return $siddate;
+    }
+
+    /**
      * @param int $surveyId
-     * @param array $isOk
+     * @param array $params
+     * @param bool $force
      * @return array
      * @throws PermissionDeniedException
+     * @SuppressWarnings(PHPMD.ExcessiveMethodLength)
      */
-    public function deactivate(int $iSurveyID, $params = [])
+    public function deactivate(int $iSurveyID, $params = [], bool $force = false)
     {
-        if (!$this->permission->hasSurveyPermission($iSurveyID, 'surveyactivation', 'update')) {
+        if ((!$force) && (!$this->permission->hasSurveyPermission($iSurveyID, 'surveyactivation', 'update'))) {
             throw new PermissionDeniedException(
                 'Access denied'
             );
@@ -60,7 +93,7 @@ class SurveyDeactivate
         $datestamp = time();
         $date = date('YmdHis', $datestamp); //'His' adds 24hours+minutes to name to allow multiple deactiviations in a day
         $DBDate = date('Y-m-d H:i:s', $datestamp);
-        $userID = $this->app->user->getId();
+        $userID = $this->app->user->getId() ?? 0;
         $aData = array();
         $aData['aSurveysettings'] = getSurveyInfo($iSurveyID);
         $aData['surveyid'] = $iSurveyID;
@@ -77,53 +110,65 @@ class SurveyDeactivate
         if (!empty($result["beforeDeactivate"]["message"])) {
             return $result;
         }
-        $result["surveyTableExists"] = tableExists('survey_' . $iSurveyID);
+        $result["surveyTableExists"] = tableExists('responses_' . $iSurveyID);
         if (!$result["surveyTableExists"]) {
             return $result;
         }
         if (!is_array($params) || (($params['ok'] ?? '') == '')) {
-            if (!empty($this->app->session->get('sNewSurveyTableName'))) {
-                $this->app->session->remove('sNewSurveyTableName');
-            }
-            $this->app->session->add('sNewSurveyTableName', $this->app->db->tablePrefix . "old_survey_{$iSurveyID}_{$date}");
             $aData['surveyid'] = $iSurveyID;
             $aData['date'] = $date;
             $aData['dbprefix'] = $this->app->db->tablePrefix;
-            $aData['sNewSurveyTableName'] = $this->app->session->get('sNewSurveyTableName');
+            $aData['sNewSurveyTableName'] = $this->app->db->tablePrefix . "old_responses_{$iSurveyID}_{$date}";
             $aData['step1'] = true;
         } else {
+            require_once "application/helpers/admin/import_helper.php";
+            // Compute the archive suffix (<sid>_<timestamp>) once so every archived table shares the same date
+            $surveyDate = $this->getSiddate($iSurveyID);
             //See if there is a tokens table for this survey
             if (tableExists("{{tokens_{$iSurveyID}}}")) {
-                $this->archiveToken($iSurveyID, $date, $userID, $DBDate, $aData);
+                $this->archiveToken($iSurveyID, $surveyDate, $userID, $DBDate, $aData);
             }
-            $this->handleSurveyTable($iSurveyID, $date, $aData, $userID, $DBDate);
-            $this->handleTimingTable($iSurveyID, $date, $aData, $userID, $DBDate);
+            $this->handleSurveyTable($iSurveyID, $surveyDate, $aData, $userID, $DBDate);
+            $this->handleTimingTable($iSurveyID, $surveyDate, $aData, $userID, $DBDate);
             $this->surveyDeactivator->afterDeactivate();
             $aData['surveyid'] = $iSurveyID;
             $this->app->db->schema->refresh();
             //after deactivation redirect to survey overview and show message...
-            //$this->redirect(['surveyAdministration/view', 'surveyid' => $iSurveyID]);
-            $this->app->session->remove('sNewSurveyTableName');
+            createTableFromPattern($this->app->db->tablePrefix . "old_questions_{$surveyDate}", $this->app->db->tablePrefix . "questions", ['sid', 'gid', 'qid', 'parent_qid', 'type'], ['sid' => $iSurveyID]);
         }
         $result['aData'] = $aData;
         return $result;
     }
 
     /**
+     * Marks a survey as expired
+     * @param int $iSurveyID
+     * @throws \LimeSurvey\Models\Services\Exception\PermissionDeniedException
+     * @return void
+     */
+    public function expire(int $iSurveyID)
+    {
+        if (!$this->permission->hasSurveyPermission($iSurveyID, 'surveysettings', 'update')) {
+            throw new PermissionDeniedException('Access denied');
+        }
+        $this->survey->expire($iSurveyID);
+    }
+
+    /**
      * Archives token table
      *
      * @param int $iSurveyID
-     * @param string $date
+     * @param string $surveyDate Archive suffix of the form <sid>_<timestamp>
      * @param int $userID
      * @param string $DBDate
      * @param array &$aData
      *
      * @return void
      */
-    protected function archiveToken($iSurveyID, $date, $userID, $DBDate, &$aData)
+    protected function archiveToken($iSurveyID, $surveyDate, $userID, $DBDate, &$aData)
     {
         $toldtable = $this->app->db->tablePrefix . "tokens_{$iSurveyID}";
-        $tnewtable = $this->app->db->tablePrefix . "old_tokens_{$iSurveyID}_{$date}";
+        $tnewtable = $this->app->db->tablePrefix . "old_tokens_{$surveyDate}";
         if ($this->app->db->getDriverName() == 'pgsql') {
             // Find out the trigger name for tid column
             $tidDefault = $this->app->db->createCommand("SELECT pg_get_expr(adbin, adrelid) as adsrc FROM pg_attribute JOIN pg_class ON (pg_attribute.attrelid=pg_class.oid) JOIN pg_attrdef ON(pg_attribute.attrelid=pg_attrdef.adrelid AND pg_attribute.attnum=pg_attrdef.adnum) WHERE pg_class.relname='$toldtable' and pg_attribute.attname='tid'")->queryScalar();
@@ -140,7 +185,7 @@ class SurveyDeactivate
         $this->archiveTable(
             $iSurveyID,
             $userID,
-            "old_tokens_{$iSurveyID}_{$date}",
+            "old_tokens_{$surveyDate}",
             'token',
             $DBDate,
             $aData['aSurveysettings']['tokenencryptionoptions'],
@@ -168,17 +213,18 @@ class SurveyDeactivate
     {
         switch ($tableType) {
             case 'token':
-                $model = $this->archivedTokenSettings;
+                $modelClass = get_class($this->archivedTokenSettings);
                 break;
             case 'timings':
-                $model = $this->archivedTimingsSettings;
+                $modelClass = get_class($this->archivedTimingsSettings);
                 break;
             case 'response':
-                $model = $this->archivedResponseSettings;
+                $modelClass = get_class($this->archivedResponseSettings);
                 break;
             default:
                 throw new \InvalidArgumentException('Unknown table type: ' . $tableType);
         }
+        $model = new $modelClass();
         $model->survey_id = $iSurveyID;
         $model->user_id = $userID;
         $model->tbl_name = $tableName;
@@ -195,14 +241,14 @@ class SurveyDeactivate
      * Handles survey table
      *
      * @param int $iSurveyID
-     * @param string $date
+     * @param string $surveyDate Archive suffix of the form <sid>_<timestamp>
      * @param array &$aData
      * @param int $userID
      * @param string $DBDate
      *
      * @return void
      */
-    protected function handleSurveyTable($iSurveyID, $date, &$aData, $userID, $DBDate)
+    protected function handleSurveyTable($iSurveyID, $surveyDate, &$aData, $userID, $DBDate)
     {
         // Reset the session of the survey when deactivating it
         killSurveySession($iSurveyID);
@@ -210,11 +256,8 @@ class SurveyDeactivate
         $this->surveyLink->deleteLinksBySurvey($iSurveyID);
         // IF there are any records in the saved_control table related to this survey, they have to be deleted
         $this->savedControl->deleteSomeRecords(array('sid' => $iSurveyID)); //Yii::app()->db->createCommand($query)->query();
-        $sOldSurveyTableName = $this->app->db->tablePrefix . "survey_{$iSurveyID}";
-        if (empty($this->app->session->get('sNewSurveyTableName'))) {
-            $this->app->session->add('sNewSurveyTableName', $this->app->db->tablePrefix . "old_survey_{$iSurveyID}_{$date}");
-        }
-        $sNewSurveyTableName = $this->app->session->get('sNewSurveyTableName');
+        $sOldSurveyTableName = $this->app->db->tablePrefix . "responses_{$iSurveyID}";
+        $sNewSurveyTableName = $this->app->db->tablePrefix . "old_responses_{$surveyDate}";
         $aData['sNewSurveyTableName'] = $sNewSurveyTableName;
 
         $query = "SELECT id FROM " . $this->app->db->quoteTableName($sOldSurveyTableName) . " ORDER BY id desc";
@@ -226,7 +269,7 @@ class SurveyDeactivate
         $survey->save();
         if ($this->app->db->getDriverName() == 'pgsql') {
             $idDefault = $this->app->db->createCommand("SELECT pg_get_expr(pg_attrdef.adbin, pg_attrdef.adrelid) FROM pg_attribute JOIN pg_class ON (pg_attribute.attrelid=pg_class.oid) JOIN pg_attrdef ON(pg_attribute.attrelid=pg_attrdef.adrelid AND pg_attribute.attnum=pg_attrdef.adnum) WHERE pg_class.relname='$sOldSurveyTableName' and pg_attribute.attname='id'")->queryScalar();
-            if (preg_match("/nextval\('(survey_\d+_id_seq\d*)'::regclass\)/", (string) $idDefault, $matches)) {
+            if (preg_match("/nextval\('(responses_\d+_id_seq\d*)'::regclass\)/", (string) $idDefault, $matches)) {
                 $oldSeq = $matches[1];
                 $this->app->db->createCommand()->renameTable($oldSeq, $sNewSurveyTableName . '_id_seq');
                 $setsequence = "ALTER TABLE " . $this->app->db->quoteTableName($sOldSurveyTableName) . " ALTER COLUMN id SET DEFAULT nextval('{{{$sNewSurveyTableName}}}_id_seq'::regclass);";
@@ -235,7 +278,7 @@ class SurveyDeactivate
         }
 
         $this->app->db->createCommand()->renameTable($sOldSurveyTableName, $sNewSurveyTableName);
-        $this->archiveTable($iSurveyID, $userID, "old_tokens_{$iSurveyID}_{$date}", 'response', $DBDate, json_encode(Response::getEncryptedAttributes($iSurveyID)));
+        $this->archiveTable($iSurveyID, $userID, "old_responses_{$surveyDate}", 'response', $DBDate, json_encode(Response::getEncryptedAttributes($iSurveyID)));
         // Load the active record again, as there have been sporadic errors with the dataset not being updated
         $survey = $this->survey->findByAttributes(array('sid' => $iSurveyID));
         $survey->scenario = 'activationStateChange';
@@ -244,25 +287,27 @@ class SurveyDeactivate
     }
 
     /**
-     * Handles survey table
+     * Rename an existing timings table and save its archive settings, even when
+     * Save timings is disabled. Does nothing when the table is missing.
      *
      * @param int $iSurveyID
-     * @param string $date
-     * @param array &$aData
-     * @param int $userID
-     * @param string $DBDate
+     * @param string $surveyDate Archive suffix of the form <sid>_<timestamp>
+     * @param array &$aData Receives sNewTimingsTableName with the prefixed archive table name.
+     * @param int $userID User recorded as the archive owner.
+     * @param string $DBDate Archive creation time in Y-m-d H:i:s format.
      *
      * @return void
+     * @throws \CDbException If a database lookup, table rename, or archive settings write fails.
      */
-    protected function handleTimingTable($iSurveyID, $date, &$aData, $userID, $DBDate)
+    protected function handleTimingTable($iSurveyID, $surveyDate, &$aData, $userID, $DBDate)
     {
         $prow = $this->survey->find('sid = :sid', array(':sid' => $iSurveyID));
-        if ($prow->savetimings == "Y") {
-            $sOldTimingsTableName = $this->app->db->tablePrefix . "survey_{$iSurveyID}_timings";
-            $sNewTimingsTableName = $this->app->db->tablePrefix . "old_survey_{$iSurveyID}_timings_{$date}";
+        if ($prow->hasTimingsTable) {
+            $sOldTimingsTableName = $this->app->db->tablePrefix . "timings_{$iSurveyID}";
+            $sNewTimingsTableName = $this->app->db->tablePrefix . "old_timings_{$surveyDate}";
             $this->app->db->createCommand()->renameTable($sOldTimingsTableName, $sNewTimingsTableName);
             $aData['sNewTimingsTableName'] = $sNewTimingsTableName;
+            $this->archiveTable($iSurveyID, $userID, "old_timings_{$surveyDate}", "timings", $DBDate, '');
         }
-        $this->archiveTable($iSurveyID, $userID, "old_survey_{$iSurveyID}_timings_{$date}", 'timings', $DBDate, '');
     }
 }

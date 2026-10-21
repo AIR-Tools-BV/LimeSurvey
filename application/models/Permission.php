@@ -2,7 +2,7 @@
 
 /*
  * LimeSurvey
- * Copyright (C) 2013 The LimeSurvey Project Team / Carsten Schmitz
+ * Copyright (C) 2013-2026 The LimeSurvey Project Team
  * All rights reserved.
  * License: GNU/GPL License v2 or later, see LICENSE.php
  * LimeSurvey is free software. This version may have been modified pursuant
@@ -160,6 +160,7 @@ class Permission extends LSActiveRecord
             'export' => false,
             'title' => gT("Superadministrator"),
             'description' => gT("Unlimited administration permissions"),
+            'warning' => gT("This setting allows an admin to perform all actions. Please make sure to assign this only to trusted persons."),
             'img' => 'ri-star-fill',
         );
         $aPermissions['auth_db'] = array(
@@ -170,7 +171,7 @@ class Permission extends LSActiveRecord
             'export' => false,
             'title' => gT("Use internal database authentication"),
             'description' => gT("Use internal database authentication"),
-            'img' => 'usergroup',
+            'img' => 'ri-shield-keyhole-line',
         );
 
         /**
@@ -281,7 +282,7 @@ class Permission extends LSActiveRecord
                 // Make sure that he owns the user he wants to give global permissions for
                 $oUser = User::model()->findByAttributes(array('uid' => $iUserID, 'parent_id' => Yii::app()->session['loginID']));
                 if (!$oUser) {
-                    die('You are not allowed to set permisisons for this user');
+                    die('You are not allowed to set permissions for this user');
                 }
                 $aFilteredPermissions = array();
                 foreach ($aBasePermissions as $PermissionName => $aPermission) {
@@ -469,17 +470,6 @@ class Permission extends LSActiveRecord
 
     /**
      * @param array $data
-     * @deprecated at 2018-01-29 use $model->attributes = $data && $model->save()
-     */
-    public function insertRecords($data)
-    {
-        foreach ($data as $item) {
-            $this->insertSomeRecords($item);
-        }
-    }
-
-    /**
-     * @param array $data
      * @return bool
      */
     public function insertSomeRecords($data)
@@ -552,7 +542,7 @@ class Permission extends LSActiveRecord
             return true;
         }
 
-        /* Always return false for unknow sCRUD */
+        /* Always return false for unknown sCRUD */
         // TODO: should not be necessary
         if (!in_array($sCRUD, array('create', 'read', 'update', 'delete', 'import', 'export'))) {
             return false;
@@ -682,8 +672,8 @@ class Permission extends LSActiveRecord
                 'data-bs-target'  => '#confirmation-modal',
                 'data-btnclass'   => 'btn-danger',
                 'type'            => 'submit',
-                'data-btntext'    => gt("Delete"),
-                'data-title'      => gt('Delete user survey permissions'),
+                'data-btntext'    => gT("Delete"),
+                'data-title'      => gT('Delete user survey permissions'),
                 'data-message'    => gT("Are you sure you want to delete this entry?"),
                 'data-post-url'   => App()->createUrl("surveyPermissions/deleteUserPermissions/"),
                 'data-post-datas' => json_encode(['surveyid' => $this->entity_id, 'userid' => $this->uid]),
@@ -699,6 +689,7 @@ class Permission extends LSActiveRecord
 
     /**
      * Checks if a user has a certain permission in the given survey
+     * Note: This function automatically also takes global permissions into account
      *
      * @param $iSurveyID integer The survey ID
      * @param $sPermission string Name of the permission
@@ -708,6 +699,7 @@ class Permission extends LSActiveRecord
      */
     public function hasSurveyPermission($iSurveyID, $sPermission, $sCRUD = 'read', $iUserID = null)
     {
+        $iUserID = $this->getUserId($iUserID);
         if (isset(self::$aCachedSurveyPermissions[$iSurveyID][$sPermission][$sCRUD][$iUserID])) {
             return self::$aCachedSurveyPermissions[$iSurveyID][$sPermission][$sCRUD][$iUserID];
         }
@@ -729,7 +721,7 @@ class Permission extends LSActiveRecord
      * @param integer $roleId
      * @param string $sPermission
      * @param string $sCRUD The permission detailsyou want to check on: 'create','read','update','delete','import' or 'export'
-     * @return bool allowed permssion
+     * @return bool allowed permission
      */
     public function roleHasPermission($iRoleId, $sPermission, $sCRUD = 'read')
     {
@@ -792,11 +784,14 @@ class Permission extends LSActiveRecord
     /**
      * get the connected user role
      * @param integer $iUserID user id
-     * @return int roleId
-     * @throws Exception
+     * @return array of UserInPermissionrole records
      */
     public static function getUserRole($iUserID)
     {
+        if (App()->getConfig("DBVersion") < 419) {
+            /* No UserInPermissionrole column before 419 */
+            return [];
+        }
         return UserInPermissionrole::model()->getRoleForUser($iUserID);
     }
 
@@ -882,6 +877,7 @@ class Permission extends LSActiveRecord
             'templates' => array(
                 'title' => gT("Themes"),
                 'description' => gT("Permission to create, view, update, delete, export and import themes"),
+                'warning' => gT("Update/import theme allows an admin to potentially use cross-site scripting using JavaScript. Please make sure to assign this only to trusted persons."),
                 'img' => ' ri-brush-fill',
             ),
             'labelsets' => array(
@@ -893,8 +889,9 @@ class Permission extends LSActiveRecord
                 'create' => false,
                 'delete' => false,
                 'export' => false,
-                'title' => gT("Settings & Plugins"),
+                'title' => gT("Settings & plugins"),
                 'description' => gT("Permission to view and update global settings & plugins and to delete and import plugins"),
+                'warning' => gT("This permission allows an admin to change security relevant settings. Please make sure to assign this only to trusted persons."),
                 'img' => 'ri-earth-fill',
             ),
             'participantpanel' => array(

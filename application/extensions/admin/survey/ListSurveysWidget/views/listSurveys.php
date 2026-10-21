@@ -1,7 +1,7 @@
 <?php
 /*
 * LimeSurvey
-* Copyright (C) 2007-2016 The LimeSurvey Project Team / Carsten Schmitz
+* Copyright (C) 2007-2026 The LimeSurvey Project Team
 * All rights reserved.
 * License: GNU/GPL License v2 or later, see LICENSE.php
 * LimeSurvey is free software. This version may have been modified pursuant
@@ -12,129 +12,45 @@
 *
 */
 
+/**
+ * @var $this ListSurveysWidget
+ */
+
 ?>
 
 <!-- Grid -->
 <div class="row">
     <div class="col-12">
         <?php
+        // Render the floating action bar (cross-page selection, fixed at bottom)
+        $floatingActions = \actions\SurveyListMassiveActions::getActions();
+        $this->widget('ext.admin.grid.FloatingActionsWidget.FloatingActionsWidget', [
+            'pk'           => 'sid',
+            'gridId'       => 'survey-grid',
+            'aActions'     => $floatingActions,
+            'selectAllUrl' => Yii::app()->createUrl('surveyAdministration/getAllSurveyIds'),
+        ]);
+        ?>
+        <?php
+
         $surveyGrid = $this->widget('application.extensions.admin.grid.CLSGridView', [
             'dataProvider'          => $this->model->search(),
             // Number of row per page selection
             'id'                    => 'survey-grid',
+            'lsCaption'               => gT('List of surveys'),
             'emptyText'             => gT('No surveys found.'),
-            'summaryText'           => gT('Displaying {start}-{end} of {count} result(s).') . ' ' . sprintf(
-                    gT('%s rows per page'),
-                    CHtml::dropDownList(
-                        'surveygrid--pageSize',
-                        $this->pageSize,
-                        Yii::app()->params['pageSizeOptions'],
-                        ['class' => 'changePageSize form-select', 'style' => 'display: inline; width: auto']
-                    )
-                ),
+            'lsPageSizeCurrentValue'  => $this->pageSize,
             'ajaxUpdate'            => 'survey-grid',
             'lsAfterAjaxUpdate'     => [
                 'window.LS.doToolTip();',
-                'bindListItemclick();',
-                'switchStatusOfListActions();'
+                'LS.restoreFocusAfterSort("survey-grid");',
             ],
-            'rowLink'               => 'Yii::app()->createUrl("surveyAdministration/view/",array("iSurveyID"=>$data->sid,"allowRedirect"=>1))',
-            // 'template'  => $this->template,
-            'massiveActionTemplate' => $this->render('massive_actions/_selector', [], true, false),
-            'columns'               => [
+            'lsRowLink'               =>
+                'Yii::app()->createUrl("surveyAdministration/view/",array("iSurveyID"=>$data->sid))',
+            'lsShowSelectionBar'      => false,
+            'columns'               => $this->model->getColumns(),
+            'lsAdditionalColumns' => $this->model->getAdditionalColumns(),
 
-                [
-                    'id'                => 'sid',
-                    'class'             => 'CCheckBoxColumn',
-                    'selectableRows'    => '100',
-                    'headerHtmlOptions' => ['class' => 'ls-sticky-column'],
-                    'htmlOptions'       => ['class' => 'ls-sticky-column']
-                ],
-                [
-                    'header'            => gT('Survey ID'),
-                    'name'              => 'survey_id',
-                    'value'             => '$data->sid',
-                    'headerHtmlOptions' => ['class' => 'd-none d-sm-table-cell text-nowrap'],
-                    'htmlOptions'       => ['class' => 'd-none d-sm-table-cell has-link'],
-                ],
-                [
-                    'header'            => gT('Status'),
-                    'name'              => 'running',
-                    'value'             => '$data->running',
-                    'type'              => 'raw',
-                    'headerHtmlOptions' => ['class' => 'd-none d-sm-table-cell text-nowrap'],
-                    'htmlOptions'       => ['class' => 'd-none d-sm-table-cell has-link'],
-                ],
-                [
-                    'header'            => gT('Title'),
-                    'name'              => 'title',
-                    'value'             => '$data->defaultlanguage->surveyls_title ?? null',
-                    'htmlOptions'       => ['class' => 'has-link'],
-                    'headerHtmlOptions' => ['class' => 'text-nowrap'],
-                ],
-                [
-                    'header'            => gT('Group'),
-                    'name'              => 'group',
-                    'value'             => '$data->surveygroup->title',
-                    'htmlOptions'       => ['class' => 'has-link'],
-                    'headerHtmlOptions' => ['class' => 'text-nowrap'],
-                ],
-                [
-                    'header'            => gT('Created'),
-                    'name'              => 'creation_date',
-                    'value'             => '$data->creationdate',
-                    'headerHtmlOptions' => ['class' => 'd-none d-sm-table-cell text-nowrap'],
-                    'htmlOptions'       => ['class' => 'd-none d-sm-table-cell has-link'],
-                ],
-                [
-                    'header'            => gT('Owner'),
-                    'name'              => 'owner',
-                    'value'             => '$data->ownerUserName',
-                    'headerHtmlOptions' => ['class' => 'd-md-none d-xl-table-cell text-nowrap'],
-                    'htmlOptions'       => ['class' => 'd-md-none d-xl-table-cell has-link'],
-                ],
-                [
-                    'header'            => gT('Anonymized responses'),
-                    'name'              => 'anonymized_responses',
-                    'value'             => '$data->anonymizedResponses',
-                    'headerHtmlOptions' => ['class' => 'd-md-none d-lg-table-cell'],
-                    'htmlOptions'       => ['class' => 'd-md-none d-lg-table-cell has-link'],
-                ],
-                [
-                    'header'      => gT('Partial'),
-                    'value'       => '$data->countPartialAnswers',
-                    'name'        => 'partial',
-                    'htmlOptions' => ['class' => 'has-link'],
-                ],
-                [
-                    'header'      => gT('Full'),
-                    'name'        => 'full',
-                    'value'       => '$data->countFullAnswers',
-                    'htmlOptions' => ['class' => 'has-link'],
-                ],
-                [
-                    'header'      => gT('Total'),
-                    'name'        => 'total',
-                    'value'       => '$data->countTotalAnswers',
-                    'htmlOptions' => ['class' => 'has-link'],
-                ],
-                [
-                    'header'      => gT('Closed group'),
-                    'name'        => 'uses_tokens',
-                    'type'        => 'raw',
-                    'value'       => '$data->hasTokensTable ? gT("Yes"):gT("No")',
-                    'htmlOptions' => ['class' => 'has-link'],
-                ],
-                [
-                    'header'            => gT('Action'),
-                    'name'              => 'actions',
-                    'value'             => '$data->buttons',
-                    'type'              => 'raw',
-                    'headerHtmlOptions' => ['class' => 'ls-sticky-column'],
-                    'htmlOptions'       => ['class' => 'text-center ls-sticky-column'],
-                ],
-
-            ],
         ]);
         ?>
     </div>

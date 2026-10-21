@@ -1,6 +1,9 @@
 <?php
 
-namespace ls\tests;
+namespace ls\tests\unit\helpers;
+
+use ls\tests\DummyController;
+use ls\tests\TestBaseClass;
 
 class GroupHelperTest extends TestBaseClass
 {
@@ -77,7 +80,7 @@ class GroupHelperTest extends TestBaseClass
      * Testing that qid and question_order fields change
      * after changing question order with reorderGroup function.
      *
-     * Use questions in the first gruop.
+     * Use questions in the first group.
      */
     public function testQuestionOrderChange()
     {
@@ -164,7 +167,7 @@ class GroupHelperTest extends TestBaseClass
         // Changing Q03 to another group.
         $qid = \Yii::app()->db->createCommand()->select('qid')
                             ->from('{{questions}}')
-                            ->where('title = "Q03"')
+                            ->where("title = 'Q03'")
                             ->andWhere('sid=' . self::$surveyId)
                             ->query()
                             ->readAll()[0]['qid'];

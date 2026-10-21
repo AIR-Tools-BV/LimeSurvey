@@ -4,6 +4,9 @@ namespace ls\tests;
 
 use Yii;
 
+/**
+ * @group api
+ */
 class RemoteControlXmlrpcTest extends TestBaseClassWeb
 {
     private static $tmpBaseUrl;
@@ -30,7 +33,6 @@ class RemoteControlXmlrpcTest extends TestBaseClassWeb
 
         $cur_path = get_include_path();
         set_include_path($cur_path . PATH_SEPARATOR . APPPATH . 'helpers');
-        require_once('Zend/XmlRpc/Client.php');
 
         self::$client = new \Zend_XmlRpc_Client($serverUrl);
     }
@@ -69,6 +71,7 @@ class RemoteControlXmlrpcTest extends TestBaseClassWeb
         $this->assertIsArray($sessionKey);
         $this->assertSame("Invalid user name or password", $sessionKey['status']);
 
-        self::$client->call('release_session_key', [$sessionKey]);
+        // $sessionKey is an error array, not a valid key — do not attempt to release it
+        // self::$client->call('release_session_key', [$sessionKey]);
     }
 }

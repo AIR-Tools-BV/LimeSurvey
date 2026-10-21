@@ -144,11 +144,9 @@ function init_chart_js_graph_with_datasets($type, $qid) {
 
     if (parsedType == 'bar' || parsedType == 'line') {
         options.scales = {
-            yAxes: [{
-                ticks: {
-                    suggestedMin: 0,
-                }
-            }]
+            y: {
+                suggestedMin: 0,
+            }
         };
     }
 
@@ -201,11 +199,9 @@ function init_chart_js_graph_with_datas($type, $qid) {
 
     if (parsedType == 'bar' || parsedType == 'line') {
         options.scales = {
-            yAxes: [{
-                ticks: {
-                    suggestedMin: 0,
-                }
-            }]
+            y: {
+                suggestedMin: 0,
+            }
         };
     }
 
@@ -226,7 +222,7 @@ function init_chart_js_graph_with_datas($type, $qid) {
 
 LS.Statistics2 = function () {
 
-    Chart.defaults.global.legend.display = false;
+    Chart.defaults.plugins.legend.display = false;
 
     if ($('#completionstateSimpleStat').length > 0) {
         $actionUrl = $('#completionstateSimpleStat').data('grid-display-url');
@@ -307,7 +303,7 @@ LS.Statistics2 = function () {
      */
     var loadBrowse = (function () {
 
-        // Static variable for function loadBrowse, catched through closure
+        // Static variable for function loadBrowse, caught through closure
         // Use this to track if we should hide/show responses
         var toggle = {};
 
@@ -604,6 +600,15 @@ LS.Statistics2 = function () {
         };
         xhr.send(data);
     };
+
+    $('input[name=outputtype]').off('change').on('change', function () {
+        if ($('input[name=outputtype]:checked').val() != 'html') {
+            $('#charttype').prop('disabled', true);
+        } else {
+            $('#charttype').prop('disabled', false);
+        }
+    });
+    $('input[name=outputtype]').trigger('change');
 };
 
 var isWaiting = {};
@@ -630,7 +635,7 @@ function graphQuery(id, cmd, success) {
 
 function ajaxError() {
     // TODO: Use NotifyFader?
-    alert("An error occured! Please reload the page!");
+    alert("An error occurred! Please reload the page!");
 }
 
 function selectCheckboxes(Div, CheckBoxName, Button) {
@@ -854,7 +859,8 @@ $(document).on('ready  pjax:scriptcomplete', function () {
 
         var $self = $(this),
             overlay = createOverlay(),
-            thisTable = $('#' + $self.data('questionId'));
+            // Subquestions of a question share the same table id, so use the table the button is in
+            thisTable = $self.closest('table');
 
         $self.css({ display: 'none' });
         thisTable.find('.chartjs-buttons').closest('tr').css({ display: 'none' });

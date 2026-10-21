@@ -2,120 +2,57 @@
     exit('No direct script access allowed');
 }
 /*
-| -------------------------------------------------------------------
-| DATABASE CONNECTIVITY SETTINGS
-| -------------------------------------------------------------------
-| This file will contain the settings needed to access your database.
-|
-| For complete instructions please consult the 'Database Connection'
-| page of the User Guide.
-|
-| -------------------------------------------------------------------
-| EXPLANATION OF VARIABLES
-| -------------------------------------------------------------------
-|
-|   'connectionString' Hostname, database, port and database type for
-|    the connection. Driver example: mysql. Currently supported:
-|               mysql, pgsql, mssql, sqlite, oci
-|   'username' The username used to connect to the database
-|   'password' The password used to connect to the database
-|   'tablePrefix' You can add an optional prefix, which will be added
-|               to the table name when using the Active Record class
-|
-*/
+ * AIR-Tools config. Everything comes from the environment so one image runs locally and on Cloud Run.
+ * Only settings that differ from upstream defaults belong here.
+ */
+
+$requireEnv = function ($name) {
+    $value = getenv($name);
+    if ($value === false || $value === '') {
+        // Without this, LimeSurvey would silently generate random encryption keys per instance.
+        throw new RuntimeException("Missing required environment variable $name");
+    }
+    return $value;
+};
+
 return array(
     'components' => array(
         'db' => array(
             'connectionString' => sprintf(
                 'mysql:host=%s;port=%s;dbname=%s;',
-                getenv('DB_HOST'),
-                getenv('DB_PORT'),
-                getenv('DB_NAME')
+                $requireEnv('DB_HOST'),
+                $requireEnv('DB_PORT'),
+                $requireEnv('DB_NAME')
             ),
             'emulatePrepare' => true,
-            'username' => getenv('DB_USERNAME'),
-            'password' => getenv('DB_PASSWORD'),
+            'username' => $requireEnv('DB_USERNAME'),
+            'password' => $requireEnv('DB_PASSWORD'),
             'charset' => 'utf8mb4',
             'tablePrefix' => 'lime_',
         ),
 
-        'cache'=>array(
-            'class'=>'CRedisCache',
-            'hostname'=> getenv('REDIS_HOST'),
-            'port'=> getenv('REDIS_PORT'),
-            'database'=>0,
-            'options'=>STREAM_CLIENT_CONNECT,
-        ),
-
+        // Sessions in the DB, so any instance can serve any request.
         'session' => array(
             'class' => 'application.core.web.DbHttpSession',
             'connectionID' => 'db',
             'sessionTableName' => '{{sessions}}',
-            'cookieParams' => array(
-                'httpOnly' => true,
-                'secure' => true, // Ensure cookies are sent over HTTPS
-                'sameSite' => 'Lax', // Adjust based on your requirements
-            ),
-            // Other session configurations...
         ),
 
-        // PUBLIC_URL pins the hostname Yii uses to build absolute URLs and redirects.
-        //
-        // Needed when a proxy presents a different Host. Cloudflare fronts this site and a
-        // Worker forwards to the *.run.app origin (Cloud Run routes by its own hostname and
-        // 404s on anything else). Without hostInfo, Yii derives absolute URLs from that
-        // Host, so e.g. /index.php/admin would redirect users off survey.air-tools.nl onto
-        // the raw *.run.app URL — leaking the origin and dropping session/CSRF cookies
-        // scoped to the public domain.
-        //
-        // Left unset, behaviour is unchanged (Yii derives it from the request).
-        'request' => array_merge(
-            array(
-                // Enable CSRF Validation
-                'enableCsrfValidation' => true,
-                // Assuming your load balancer terminates SSL and communicates with your backend over HTTP
-                'csrfCookie' => array(
-                    'sameSite' => 'Lax',
-                    'secure' => true,
-                ),
-            ),
-            getenv('PUBLIC_URL') ? array('hostInfo' => getenv('PUBLIC_URL')) : array()
-        ),
+        // Behind Cloudflare and Cloud Run the Host header is the *.run.app origin.
+        // Pin the public host so redirects and cookies stay on survey.air-tools.nl.
+        'request' => getenv('PUBLIC_URL') ? array('hostInfo' => getenv('PUBLIC_URL')) : array(),
 
         'urlManager' => array(
             'urlFormat' => 'path',
-            'rules' => array(
-                // You can add your own rules here
-            ),
+            'rules' => array(),
             'showScriptName' => true,
         ),
-        'log' => array(
-            'routes' => array(
-                'fileError' => array(
-                    'class' => 'CFileLogRoute',
-                    'levels' => 'trace, info, warning, error',
-                    'except' => 'exception.CHttpException.404',
-                    'logFile' => '/var/www/html/tmp/limesurvey-test-lars.log', // Update this to your desired log path
-                ),
-            ),
-        ),
-
     ),
-    // Use the following config variable to set modified optional settings copied from config-defaults.php
-    'config'=>array(
-        // debug: Set this to 1 if you are looking for errors. If you still get no errors after enabling this
-        // then please check your error-logs - either in your hosting provider admin panel or in some /logs directory
-        // on your webspace.
-        // LimeSurvey developers: Set this to 2 to additionally display STRICT PHP error messages and put MySQL in STRICT mode and get full access to standard themes
-        'debug'=>0,
-        'debugsql'=>0, // Set this to 1 to enanble sql logging, only active when debug = 2
-        // 'force_xmlsettings_for_survey_rendering' => true, // Uncomment if you want to force the use of the XML file rather than DB (for easy theme development)
-        // 'use_asset_manager'=>true, // Uncomment if you want to use debug mode and asset manager at the same time
-        // Update default LimeSurvey config here
-
-        'mysqlEngine' => 'INNODB',
-        'memory_limit' => '16384'
-    )
+    'config' => array(
+        'debug' => 0,
+        'debugsql' => 0,
+        // Same keys on every instance, or data encrypted on one cannot be read on another.
+        'encryptionnonce' => $requireEnv('ENCRYPTION_NONCE'),
+        'encryptionsecretboxkey' => $requireEnv('ENCRYPTION_SECRETBOX_KEY'),
+    ),
 );
-/* End of file config.php */
-/* Location: ./application/config/config.php */

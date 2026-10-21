@@ -19,12 +19,12 @@ App()->getClientScript()->registerScript(
         <ul class="nav nav-tabs" id="boxeslist">
             <li class="nav-item">
                 <a class="nav-link active" href='#boxes' data-bs-toggle="tab">
-                    <?php eT('Boxes') ?>
+                    <?php eT('Buttons') ?>
                 </a>
             </li>
             <li class="nav-item">
                 <a class="nav-link" href='#boxsettings' data-bs-toggle="tab">
-                    <?php eT('Box Settings'); ?>
+                    <?php eT('Settings'); ?>
                 </a>
             </li>
         </ul>
@@ -36,19 +36,7 @@ App()->getClientScript()->registerScript(
                     [
                         'id' => 'boxes-grid',
                         'dataProvider' => $dataProviderBox->search(),
-                        'pager' => [
-                            'class' => 'application.extensions.admin.grid.CLSYiiPager',
-                        ],
-                        'summaryText' => gT('Displaying {start}-{end} of {count} result(s).') . ' '
-                            . sprintf(
-                                gT('%s rows per page'),
-                                CHtml::dropDownList(
-                                    'boxes-pageSize',
-                                    Yii::app()->user->getState('pageSize', Yii::app()->params['defaultPageSize']),
-                                    Yii::app()->params['pageSizeOptions'],
-                                    array('class' => 'changePageSize form-select', 'style' => 'display: inline; width: auto')
-                                )
-                            ),
+                        'lsPageSizeCurrentValue' => Yii::app()->user->getState('pageSize', Yii::app()->params['defaultPageSize']),
                         'columns' => [
                             [
                                 'header' => gT('Position'),
@@ -103,20 +91,20 @@ App()->getClientScript()->registerScript(
             <div id="boxsettings" class="tab-pane fade">
 
                 <div class="row">
-                    <label class="col-md-2 col-form-label"><?php eT("Display logo:"); ?> </label>
-                    <div class="col-md-2">
-                        <?php $this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
-                            'name'          => 'show_logo',
-                            'checkedOption' => $bShowLogo,
-                            'selectOptions' => [
-                                '1' => gT('On'),
-                                '0' => gT('Off'),
-                            ]
-                        ]); ?>
-                        <input type="hidden" id="show_logo-url" data-url="<?php echo App()->createUrl('homepageSettings/toggleShowLogoStatus'); ?>"/>
-                    </div>
+<!--                    <label class="col-md-2 col-form-label">--><?php //eT("Display logo:"); ?><!-- </label>-->
+<!--                    <div class="col-md-2">-->
+<!--                        --><?php //$this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
+//                            'name'          => 'show_logo',
+//                            'checkedOption' => $bShowLogo,
+//                            'selectOptions' => [
+//                                '1' => gT('On'),
+//                                '0' => gT('Off'),
+//                            ]
+//                        ]); ?>
+<!--                        <input type="hidden" id="show_logo-url" data-url="--><?php //echo App()->createUrl('homepageSettings/toggleShowLogoStatus'); ?><!--"/>-->
+<!--                    </div>-->
 
-                    <label class="col-md-2 col-form-label"><?php eT("Show last visited survey and question:"); ?> </label>
+                    <label class="col-md-4 col-form-label"><?php eT("Show last visited survey and question:"); ?> </label>
                     <div class="col-md-2">
                         <?php $this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
                             'name'          => 'show_last_survey_and_question',
@@ -133,20 +121,20 @@ App()->getClientScript()->registerScript(
                 </div>
 
                 <div class="row">
-                    <label class="col-md-2 col-form-label"><?php eT("Show survey list:"); ?> </label>
-                    <div class="col-md-2">
-                        <?php $this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
-                            'name'          => 'show_survey_list',
-                            'checkedOption' => $bShowSurveyList,
-                            'selectOptions' => [
-                                '1' => gT('On'),
-                                '0' => gT('Off'),
-                            ],
-                        ]); ?>
-                        <input type="hidden" id="show_survey_list-url" data-url="<?php echo App()->createUrl('homepageSettings/toggleShowSurveyList'); ?>"/>
-                    </div>
-
-                    <label class="col-md-2 col-form-label"><?php eT("Show search box on survey list:"); ?> </label>
+<!--                    <label class="col-md-2 col-form-label">--><?php //eT("Show survey list:"); ?><!-- </label>-->
+<!--                    <div class="col-md-2">-->
+<!--                        --><?php //$this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
+//                            'name'          => 'show_survey_list',
+//                            'checkedOption' => $bShowSurveyList,
+//                            'selectOptions' => [
+//                                '1' => gT('On'),
+//                                '0' => gT('Off'),
+//                            ],
+//                        ]); ?>
+<!--                        <input type="hidden" id="show_survey_list-url" data-url="--><?php //echo App()->createUrl('homepageSettings/toggleShowSurveyList'); ?><!--"/>-->
+<!--                    </div>-->
+<!--
+                    <label class="col-md-4 col-form-label"><?php eT("Show search box on survey list:"); ?> </label>
                     <div class="col-md-2">
                         <?php $this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
                             'name'          => 'show_survey_list_search',
@@ -158,52 +146,52 @@ App()->getClientScript()->registerScript(
                         ]); ?>
                         <input type="hidden" id="show_survey_list_search-url" data-url="<?php echo App()->createUrl('homepageSettings/toggleShowSurveyListSearch'); ?>"/>
                     </div>
-
-                    <br/><br/>
+-->
+<!--                    <br/><br/>-->
                 </div>
 
-                <div class="row">
-                    <label class="col-md-2 col-form-label"><?php eT("Wrap container around boxes"); ?> </label>
-                    <div class="col-md-2">
-                        <?php $this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
-                            'name'          => 'boxes_in_container',
-                            'checkedOption' => $bBoxesInContainer,
-                            'selectOptions' => [
-                                '1' => gT('On'),
-                                '0' => gT('Off'),
-                            ],
-                        ]); ?>
-                        <input type="hidden" id="boxes_in_container-url" data-url="<?php echo App()->createUrl('homepageSettings/changeBoxesInContainer'); ?>"/>
-                    </div>
-                    <br/><br/>
-                    <br/><br/>
-                </div>
+<!--                <div class="row">-->
+<!--                    <label class="col-md-2 col-form-label">--><?php //eT("Wrap container around boxes"); ?><!-- </label>-->
+<!--                    <div class="col-md-2">-->
+<!--                        --><?php //$this->widget('ext.ButtonGroupWidget.ButtonGroupWidget', [
+//                            'name'          => 'boxes_in_container',
+//                            'checkedOption' => $bBoxesInContainer,
+//                            'selectOptions' => [
+//                                '1' => gT('On'),
+//                                '0' => gT('Off'),
+//                            ],
+//                        ]); ?>
+<!--                        <input type="hidden" id="boxes_in_container-url" data-url="--><?php //echo App()->createUrl('homepageSettings/changeBoxesInContainer'); ?><!--"/>-->
+<!--                    </div>-->
+<!--                    <br/><br/>-->
+<!--                    <br/><br/>-->
+<!--                </div>-->
 
-                <div class="row">
-                    <label class="col-md-2 col-form-label"><?php eT("Boxes by row:"); ?></label>
-                    <div class="col-md-1">
-                        <input class="form-control" type="number" id="iBoxesByRow" value="<?php echo $iBoxesByRow; ?>" max="6" min="0" name="boxes_by_row"/>
-                    </div>
-                    <label class="col-md-2 offset-md-1 col-form-label"><?php eT("Box orientation:"); ?></label>
-                    <div class="col-md-1">
-                        <select class="form-select" id="iBoxesOffset" name="boxes_offset">
-                            <option value="1" <?php if ($iBoxesOffset == '1') {
-                                echo "selected";
-                            } ?> ><?php eT('Left to right') ?></option>
-                            <option value="2" <?php if ($iBoxesOffset == '2') {
-                                echo "selected";
-                            } ?> ><?php eT('Right to left') ?></option>
-                            <option value="3" <?php if ($iBoxesOffset == '3') {
-                                echo "selected";
-                            } ?> ><?php eT('Centered') ?></option>
-                        </select>
-                    </div>
-                    <div class="col-md-3">
-                        <input type="hidden" id="boxesupdatemessage" data-ajaxsuccessmessage="<?php eT('Box settings updated!'); ?>"/>
-                        <input type="hidden" id="boxeserrormessage" data-ajaxerrormessage="<?php eT('Error while updating box settings!'); ?>"/>
-                    </div>
-                    <br/><br/><br/><br/>
-                </div>
+<!--                <div class="row">-->
+<!--                    <label class="col-md-2 col-form-label">--><?php //eT("Boxes by row:"); ?><!--</label>-->
+<!--                    <div class="col-md-1">-->
+<!--                        <input class="form-control" type="number" id="iBoxesByRow" value="--><?php //echo $iBoxesByRow; ?><!--" max="6" min="0" name="boxes_by_row"/>-->
+<!--                    </div>-->
+<!--                    <label class="col-md-2 offset-md-1 col-form-label">--><?php //eT("Box orientation:"); ?><!--</label>-->
+<!--                    <div class="col-md-1">-->
+<!--                        <select class="form-select" id="iBoxesOffset" name="boxes_offset">-->
+<!--                            <option value="1" --><?php //if ($iBoxesOffset == '1') {
+//                                echo "selected";
+//                            } ?><!-- >--><?php //eT('Left to right') ?><!--</option>-->
+<!--                            <option value="2" --><?php //if ($iBoxesOffset == '2') {
+//                                echo "selected";
+//                            } ?><!-- >--><?php //eT('Right to left') ?><!--</option>-->
+<!--                            <option value="3" --><?php //if ($iBoxesOffset == '3') {
+//                                echo "selected";
+//                            } ?><!-- >--><?php //eT('Centered') ?><!--</option>-->
+<!--                        </select>-->
+<!--                    </div>-->
+<!--                    <div class="col-md-3">-->
+<!--                        <input type="hidden" id="boxesupdatemessage" data-ajaxsuccessmessage="--><?php //eT('Box settings updated!'); ?><!--"/>-->
+<!--                        <input type="hidden" id="boxeserrormessage" data-ajaxerrormessage="--><?php //eT('Error while updating box settings!'); ?><!--"/>-->
+<!--                    </div>-->
+<!--                    <br/><br/><br/><br/>-->
+<!--                </div>-->
             </div>
         </div>
     </div>
