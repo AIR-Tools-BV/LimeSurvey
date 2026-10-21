@@ -76,6 +76,13 @@ spec:
           ports:
             - name: http1
               containerPort: 80
+          # Apache only listens after updatedb (below). A big schema upgrade can outlast the
+          # default 240s startup window, so allow up to 10 minutes.
+          startupProbe:
+            tcpSocket:
+              port: 80
+            periodSeconds: 10
+            failureThreshold: 60
           # Rendering a survey stats/reads many small theme files. Served straight off
           # gcsfuse each one is a network round-trip and a survey page took ~3.3s vs ~0.9s
           # on GKE (gcsfuse metadata/file caches did NOT fix it — Cloud Run gives the file
