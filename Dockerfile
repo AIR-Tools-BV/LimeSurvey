@@ -1,4 +1,6 @@
-FROM php:8.1.30-apache
+# 8.3.36 fixes PHP2Shell (CVE-2026-109618, CVE-2026-109619). 8.1 is EOL and gets no fix.
+# bookworm is pinned because the imap extension needs libc-client-dev, which trixie dropped.
+FROM php:8.3.36-apache-bookworm
 
 # Enable mod_remoteip and configure
 RUN a2enmod remoteip && \
