@@ -1,0 +1,24 @@
+/* AIR-Tools branding on top of air_tools.css, which is generated from Sea_Green by `make admintheme`. */
+
+/* Top bar: our logo instead of the LimeSurvey icon, site name beside it. */
+.navbar-brand {
+  display: flex;
+  align-items: center;
+}
+
+.navbar-brand img {
+  content: url(../images/airtools-logo.png);
+  height: 54px;
+  margin-right: 10px;
+}
+
+/* Login page: our logo instead of the LimeSurvey artwork. */
+.logo-alt-1,
+.decor-2 {
+  background: none;
+}
+
+.decor-1 {
+  background: url(../images/airtools-logo.png) no-repeat center / 75%;
+  height: 850px;
+}
