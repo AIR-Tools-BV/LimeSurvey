@@ -51,8 +51,6 @@ return array(
     'config' => array(
         'debug' => 0,
         'debugsql' => 0,
-        // Classic editor by default: the AirTools widgets attach to its pages. Users can still opt in.
-        'editorEnabled' => false,
         // Same keys on every instance, or data encrypted on one cannot be read on another.
         'encryptionnonce' => $requireEnv('ENCRYPTION_NONCE'),
         'encryptionsecretboxkey' => $requireEnv('ENCRYPTION_SECRETBOX_KEY'),

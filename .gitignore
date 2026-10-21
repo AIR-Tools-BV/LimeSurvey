@@ -281,7 +281,7 @@ docker/
 /vendor/mk-j/php_xlsxwriter/composer.lock
 /vendor/mockery/mockery/composer.lock
 
-# AIR-Tools: our themes and plugins ship inside the image, so they are tracked.
+# AIR-Tools: our themes ship inside the image, so they are tracked.
 # Serving them from the GCS mount made survey pages ~4x slower (Twig reads many small files).
 !/.dockerignore
 !/.gcloudignore
@@ -291,7 +291,3 @@ docker/
 !/upload/themes/survey/extends_vanilla/**
 !/upload/themes/survey/extends_fruity_twentythree
 !/upload/themes/survey/extends_fruity_twentythree/**
-!/upload/plugins/AirTools
-!/upload/plugins/AirTools/**
-!/upload/plugins/TrackSeenQuestions
-!/upload/plugins/TrackSeenQuestions/**
