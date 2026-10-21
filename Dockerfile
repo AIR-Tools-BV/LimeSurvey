@@ -11,6 +11,11 @@ RUN a2enmod remoteip && \
     } > /etc/apache2/conf-available/remoteip.conf && \
     a2enconf remoteip
 
+# LimeSurvey's .htaccess routes /rest/... to index.php (the new editor's API) and blocks
+# vendor/, tmp/runtime/ and similar paths. Apache ignores it unless rewrite is on and overrides are allowed.
+RUN a2enmod rewrite && \
+    sed -i '/<Directory \/var\/www\/>/,/<\/Directory>/ s/AllowOverride None/AllowOverride All/' /etc/apache2/apache2.conf
+
 # Configure Apache to use the headers set by the load balancer
 RUN { \
         echo 'SetEnvIf X-Forwarded-Proto "https" HTTPS=on'; \
