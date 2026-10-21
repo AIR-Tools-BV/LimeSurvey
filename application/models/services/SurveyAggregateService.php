@@ -58,7 +58,7 @@ class SurveyAggregateService
     /**
      * Set REST Mode
      *
-     * In rest mode we have different expecations about data formats.
+     * In rest mode we have different expectations about data formats.
      * For example datetime objects inputs/output
      * as UTC JSON format Y-m-d\TH:i:s.000\Z.
      *
@@ -149,5 +149,14 @@ class SurveyAggregateService
     public function deactivate($surveyId, $input)
     {
         return $this->surveyDeactivate->deactivate($surveyId, $input);
+    }
+
+    /**
+     * Marks a survey as expired
+     * @param mixed $surveyId
+     */
+    public function expire($surveyId)
+    {
+        return $this->surveyDeactivate->expire($surveyId);
     }
 }

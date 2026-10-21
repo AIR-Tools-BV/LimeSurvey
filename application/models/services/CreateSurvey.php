@@ -189,7 +189,7 @@ class CreateSurvey
         $this->survey->startdate = null;
         $this->survey->template = 'inherit'; //default template from default group is set to 'fruity'
         $this->survey->active = self::STRING_VALUE_FOR_NO_FALSE;
-        $this->survey->anonymized = self::STRING_VALUE_FOR_NO_FALSE;
+        $this->survey->anonymized = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->format = self::STRING_SHORT_VALUE_INHERIT; //inherits value from survey group
         $this->survey->savetimings = self::STRING_SHORT_VALUE_INHERIT; //could also be 'I' for inherit from survey group ...
         $this->survey->language = $this->simpleSurveyValues->baseLanguage;
@@ -197,6 +197,7 @@ class CreateSurvey
         $this->survey->ipaddr = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->ipanonymize = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->refurl = self::STRING_SHORT_VALUE_INHERIT;
+        $this->survey->savequotaexit = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->usecookie = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->emailnotificationto = 'inherit';
         $this->survey->allowregister = self::STRING_SHORT_VALUE_INHERIT;
@@ -207,10 +208,10 @@ class CreateSurvey
         $this->survey->showgroupinfo = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->showqnumcode = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->shownoanswer = self::STRING_SHORT_VALUE_INHERIT;
+        $this->survey->preselectnoanswer = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->showwelcome = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->allowprev =  self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->questionindex = self::INTEGER_VALUE_FOR_INHERIT;
-        $this->survey->nokeyboard = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->showprogress = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->printanswers = self::STRING_SHORT_VALUE_INHERIT;
         $this->survey->listpublic = self::STRING_SHORT_VALUE_INHERIT;

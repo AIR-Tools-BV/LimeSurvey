@@ -6,7 +6,5 @@ $vendorDir = dirname(__DIR__);
 $baseDir = dirname($vendorDir);
 
 return array(
-    'Spreadsheet' => array($vendorDir . '/pear/spreadsheet_excel_writer'),
-    'OLE' => array($vendorDir . '/pear/ole'),
-    'Console' => array($vendorDir . '/pear/console_getopt'),
+    'Zend_' => array($vendorDir . '/shardj/zf1-future/library'),
 );

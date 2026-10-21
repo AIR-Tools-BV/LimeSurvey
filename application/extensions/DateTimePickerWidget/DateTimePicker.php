@@ -79,7 +79,8 @@ class DateTimePicker extends CInputWidget
             $this->htmlOptions['data-' . $key] = $pluginOption;
         }
         $this->htmlOptions['data-td-target'] = '#' . $this->mainId;
-        $this->htmlOptions['class'] = 'form-control';
+        $customClass = $this->getValue('class', $this->htmlOptions, '');
+        $this->htmlOptions['class'] = 'form-control ' . $customClass;
         $this->format = $this->getValue('data-format', $this->htmlOptions, 'DD.MM.YYYY HH:mm');
     }
 
@@ -198,8 +199,15 @@ class DateTimePicker extends CInputWidget
         }
         $localeScript .= "      dayViewHeaderFormat: { month: 'long', year: 'numeric' },\n" .
             "      locale: '$locale',\n" .
-            "      format: '$dateFormat',\n" .
-            "      hourCycle: 'h24'\n";
+            "      format: '$dateFormat',\n";
+
+        // Try to guess the right hour cycle from the format
+        // The old datetimepicker did that, but Tempus Dominus does not (it guesses from the locale, not the format)
+        if (strpos(strtolower($dateFormat), 'a') === false && strpos($dateFormat, 'h') === false) {
+            $localeScript .= "      hourCycle: 'h24',\n";
+        } else {
+            $localeScript .= "      hourCycle: 'h12',\n";
+        }
 
         return "{
           $localeScript
@@ -213,9 +221,9 @@ class DateTimePicker extends CInputWidget
     private function getRestrictionsOptionsString()
     {
         $minDate = $this->getValue('data-minDate', $this->htmlOptions, 'undefined');
-        $minDate = $minDate != 'undefined' ? "'$minDate'" : $minDate;
+        $minDate = $minDate != 'undefined' ? "'" . CJavaScript::quote($minDate) . "'" : $minDate;
         $maxDate = $this->getValue('data-maxDate', $this->htmlOptions, 'undefined');
-        $maxDate = $maxDate != 'undefined' ? "'$maxDate'" : $maxDate;
+        $maxDate = $maxDate != 'undefined' ? "'" . CJavaScript::quote($maxDate) . "'" : $maxDate;
 
         return "{
                 minDate: $minDate, 
@@ -296,7 +304,8 @@ class DateTimePicker extends CInputWidget
         ) ? 'true' : 'false';
         $stepping = $this->getValue('data-stepping', $this->htmlOptions, 1);
         $stepping = $stepping != 0 ? $stepping : 1;
-
+        $theme = $this->getValue('data-theme', $this->htmlOptions, null);
+        $themeValue = $theme !== null ? "'$theme'" : "(document.body.hasAttribute('data-thememode') ? document.body.getAttribute('data-thememode') : 'auto')";
         $localization = $this->getLocalizationOptionsString();
         $calendarComponents = $this->getComponentsOptionsString();
         $icons = $this->getCustomIconsString();
@@ -313,7 +322,7 @@ class DateTimePicker extends CInputWidget
                     close: $close,
                 },
                 sideBySide: $sideBySide,
-                theme : (document.body.hasAttribute('data-thememode')) ? document.body.getAttribute('data-thememode') : 'auto'
+                theme : $themeValue,
             },
             stepping: $stepping
         }";
@@ -346,12 +355,12 @@ class DateTimePicker extends CInputWidget
     private function getMomentJsOverrideString()
     {
         $id = $this->getId();
-        $date = $this->value;
+        $date = CJavaScript::quote((string) $this->value);
         $dateFormat = CHtml::encode($this->format);
         $minDate = $this->getValue('data-minDate', $this->htmlOptions, 'undefined');
-        $minDate = $minDate != 'undefined' ? "'$minDate'" : $minDate;
+        $minDate = $minDate != 'undefined' ? "'" . CJavaScript::quote($minDate) . "'" : $minDate;
         $maxDate = $this->getValue('data-maxDate', $this->htmlOptions, 'undefined');
-        $maxDate = $maxDate != 'undefined' ? "'$maxDate'" : $maxDate;
+        $maxDate = $maxDate != 'undefined' ? "'" . CJavaScript::quote($maxDate) . "'" : $maxDate;
         $viewDate = $this->getViewDate();
         if (empty($viewDate)) {
             $viewDate = 'undefined';
@@ -472,14 +481,14 @@ class DateTimePicker extends CInputWidget
     private function getViewDate()
     {
         if (!empty($this->value)) {
-            return "'" . $this->value . "'";
+            return "'" . CJavaScript::quote((string) $this->value) . "'";
         }
 
         $minDate = $this->getValue('data-minDate', $this->htmlOptions, null);
         if (isset($minDate)) {
             // If min date is in the future, we set the view date to the min date
             if (strtotime($minDate) > time()) {
-                return "'$minDate'";
+                return "'" . CJavaScript::quote($minDate) . "'";
             }
         }
 
@@ -487,7 +496,7 @@ class DateTimePicker extends CInputWidget
         if (isset($maxDate)) {
             // If max date is in the past, we set the view date to the max date
             if (strtotime($maxDate) < time()) {
-                return "'$maxDate'";
+                return "'" . CJavaScript::quote($maxDate) . "'";
             }
         }
 

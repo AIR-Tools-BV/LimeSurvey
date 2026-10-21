@@ -52,13 +52,9 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
         if ($this->getQuestionAttribute('use_dropdown') == 1) {
             $this->bUseDropdownLayout = true;
             $this->sCoreClass .= " dropdown-array";
-            // I suppose this is irrelevant and if not, why t** f*** is there hardcoded text in the renderer function?
-            //$caption           = gT("A table with a subquestion on each row. You have to select your answer.");
         } else {
             $this->bUseDropdownLayout = false;
             $this->sCoreClass .= " radio-array";
-            // I suppose this is irrelevant and if not, why t** f*** is there hardcoded text in the renderer function?
-            //$caption           = gT("A table with a subquestion on each row. The answer options are contained in the table header.");
         }
 
         $this->setSubquestions();
@@ -71,7 +67,7 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
             return $combined;
         }, 0);
         // $right_exists is a flag to find out if there are any right hand answer parts.
-        // If there arent we can leave out the right td column
+        // If there aren't we can leave out the right td column
         $this->rightExists = ($iCount > 0);
 
         if (ctype_digit(trim((string) $this->getQuestionAttribute('answer_width')))) {
@@ -91,6 +87,8 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
             } else {
                 $this->answerwidth = $this->answerwidth / 2;
             }
+            // Add a class so we can style the left side text differently when there is a right side text
+            $this->sCoreClass .= " semantic-differential-list";
         }
         if ($this->getQuestionCount() > 0 && $this->getAnswerCount() > 0) {
             $this->cellwidth = round(($this->columnswidth / $this->getAnswerCount()), 1);
@@ -189,7 +187,7 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
         //$aAnswer->answerl10ns[$sSurveyLanguage]->answer
         $aRows = [];
         foreach ($this->aSubQuestions[0] as $i => $oQuestion) {
-            $myfname        = $this->sSGQA . $oQuestion->title;
+            $myfname        = $this->sSGQA . '_S' . $oQuestion->qid;
             $answertext     = $oQuestion->questionl10ns[$this->sLanguage]['question'];
             // Check the mandatory sub Q violation
             $error = (in_array($myfname, $this->aMandatoryViolationSubQ));
@@ -228,7 +226,9 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
                 $options[] = array(
                     'text' => gT('No answer'),
                     'value' => '',
-                    'selected' => ($value == '') ?  SELECTED : '',
+                    'selected' => (
+                        PRESELECT_NO_ANSWER && $value == ''
+                    ) ? SELECTED : '',
                 );
             }
             unset($showNoAnswer);
@@ -266,7 +266,7 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
                 }
             }
 
-            $myfname        = $this->sSGQA . $oQuestion->title;
+            $myfname        = $this->sSGQA . '_S' . $oQuestion->qid;
             $answertext     = $oQuestion->questionl10ns[$this->sLanguage]->question;
             $answertext     = (strpos((string) $answertext, '|') !== false) ? substr((string) $answertext, 0, strpos((string) $answertext, '|')) : $answertext;
 
@@ -299,7 +299,9 @@ class RenderArrayFlexibleRow extends QuestionBaseRenderer
                     'ld'                     => '',
                     'code' => $oAnswer->code,
                     'label'                  => gT('No answer'),
-                    'checked'                => (is_null($value) || $value === '') ? 'checked' : '',
+                    'checked'                => (
+                        PRESELECT_NO_ANSWER && (is_null($value) || $value === '')
+                    ) ? 'checked' : '',
                 );
             }
 

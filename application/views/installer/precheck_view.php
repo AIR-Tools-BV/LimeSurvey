@@ -13,6 +13,11 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
         <?php $this->renderPartial('/installer/sidebar_view', compact('progressValue', 'classesForStep')); ?>
     </div>
     <div class="col-lg-9">
+        <?php if (empty($next) && empty($cookiesAllowed)) : ?>
+            <div class="alert alert-warning" role="alert">
+                <?= gT("Cookies seem to be disabled. Please use the \"Check again\" button instead of refreshing the page."); ?>
+            </div>
+        <?php endif; ?>
         <h2><?php echo $title; ?></h2>
         <p><?php echo $descp; ?></p>
         <legend><?php eT("Minimum requirements"); ?></legend>
@@ -30,9 +35,9 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                        <td><?php eT("PHP version"); ?></td>
                        <td><?= $model::MINIMUM_PHP_VERSION?></td>
                        <td>
-                           <?php if($model->isPhpVersionOK):?>
-                               <?= phpversion(); ?>
-                           <?php else:?>
+                           <?php if ($model->isPhpVersionOK) :?>
+                                <?= phpversion(); ?>
+                           <?php else :?>
                                <span style='font-weight:bold; color: red'><?php eT("Outdated"); ?>: <?= phpversion(); ?></span>
                            <?php endif;?>
                         </td>
@@ -41,9 +46,9 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                        <td><?php eT("Minimum memory available"); ?></td>
                        <td><?=$model::MINIMUM_MEMORY_LIMIT?></td>
                        <td>
-                           <?php if($model->isMemoryLimitOK):?>
-                                <?= $model->memoryLimit == -1 ? gT("Unlimited") : $model->memoryLimit."MB" ?>
-                           <?php else:?>
+                           <?php if ($model->isMemoryLimitOK) :?>
+                                <?= $model->memoryLimit == -1 ? gT("Unlimited") : $model->memoryLimit . "MB" ?>
+                           <?php else :?>
                                 <span style='font-weight:bold; color: red'><?= gT("Too low"); ?>: <?=$model->memoryLimit?>MB</span>
                            <?php endif;?>
                        </td>
@@ -52,10 +57,10 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                        <td><?php eT("PHP PDO driver library"); ?></td>
                        <td><?php eT("At least one installed"); ?></td>
                        <td>
-                           <?php if(empty($model->supportedDbTypes)):?>
+                           <?php if (empty($model->supportedDbTypes)) :?>
                                <span style='font-weight:bold; color: red'><?php eT("None found"); ?></span>
-                           <?php else:?>
-                               <?= implode(', ',$model->supportedDbTypes); ?>
+                           <?php else :?>
+                               <?= implode(', ', $model->supportedDbTypes); ?>
                            <?php endif;?>
                        </td>
                 </tr>
@@ -75,10 +80,32 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                        <td><?= $model->isPhpZlibPresent ? $iconOk : $iconFail ?></td>
                 </tr>
                 <tr>
+                    <td><?php eT("PHP zip library"); ?></td>
+                    <td><span class='ri-check-fill text-success'></span></td>
+                    <td><?= $model->isPhpZipPresent ? $iconOk : $iconFail ?></td>
+                </tr>
+                <tr>
+                    <td><?php eT("PHP curl library"); ?></td>
+                    <td><span class='ri-check-fill text-success'></span></td>
+                    <td><?= $model->isPhpCurlPresent ? $iconOk : $iconFail ?></td>
+                </tr>
+
+                <tr>
                        <td><?php eT("PHP/PECL JSON library"); ?></td>
                        <td><span class='ri-check-fill text-success'></span></td>
                        <td><?= $model->isPhpJsonPresent ? $iconOk : $iconFail ?></td>
                 </tr>
+                <tr>
+                        <td><?php eT("PHP GD library (with JPEG & Freetype support)"); ?></td>
+                        <td><span class='ri-check-fill text-success'></span></td>
+                        <td>
+                        <?php if ($model->isPhpGdPresent) : ?>
+                            <?= ($model->phpGdHasFreeTypeSupport && $model->phpGdHasJpegSupport) ? $iconOk : $iconFail . '<br/>' . gT("GD extension doesn't support JPEG and/or Freetype") ?>
+                        <?php else : ?>
+                            <?= $iconFail ?>
+                        <?php endif; ?>
+               </td>
+
                 <tr>
                        <td>/application/config <?php eT("directory"); ?></td>
                        <td><?php eT("Found & writable"); ?></td>
@@ -98,7 +125,7 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                        <td><?php eT("Session writable"); ?></td>
                        <td><span class='ri-check-fill text-success'></span></td>
                        <td>
-                           <?= $sessionWritable ? $iconOk : $iconFail.'<br/>session.save_path: ' . session_save_path(); ?>
+                           <?= $sessionWritable ? $iconOk : $iconFail . '<br/>session.save_path: ' . session_save_path(); ?>
                        </td>
                 </tr>
             </tbody>
@@ -115,17 +142,6 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
         </thead>
         <tbody>
         <tr>
-               <td><?php eT("PHP GD library"); ?></td>
-               <td><span class='ri-check-fill text-success'></span></td>
-               <td>
-                    <?php if ($model->isPhpGdPresent): ?>
-                        <?= $model->phpGdHasJpegSupport ? $iconOk : $iconFail . '<br/>' . gT("The GD extension found doesn't support JPEG") ?>
-                    <?php else: ?>
-                        <?= $iconFail ?>
-                    <?php endif; ?>
-               </td>
-        </tr>
-        <tr>
                <td><?php eT("PHP Intl library"); ?></td>
                <td><span class='ri-check-fill text-success' alt="Check"></span></td>
                <td><?= $model->isCollatorPresent ? $iconOk : $iconFail ?></td>
@@ -136,17 +152,12 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
                <td><?= $model->isPhpLdapPresent ? $iconOk : $iconFail ?></td>
         </tr>
         <tr>
-               <td><?php eT("PHP zip library"); ?></td>
-               <td><span class='ri-check-fill text-success'></span></td>
-               <td><?= $model->isPhpZipPresent ? $iconOk : $iconFail ?></td>
-        </tr>
-        <tr>
                <td><?php eT("PHP imap library"); ?></td>
                <td><span class='ri-check-fill text-success'></span></td>
                <td><?= $model->isPhpImapPresent ? $iconOk : $iconFail ?></td>
         </tr>
         <tr>
-                
+
                <td><?php eT("PHP Sodium library [data encryption]"); ?></td>
                <td><span class='ri-check-fill text-success' alt="Check"></span></td>
                <td><?= $model->isSodiumPresent ? $iconOk : $iconFail ?></td>
@@ -154,16 +165,80 @@ $iconFail = "<span class='ri-error-warning-fill text-danger'></span>";
         </tbody>
 
         </table>
+        <br/>
+        <legend><?php eT('Recommended PHP settings'); ?></legend>
+        <table class='table-striped table'>
+        <thead>
+            <tr>
+                   <th>&nbsp;</th>
+                   <th><?php eT('Recommended'); ?></th>
+                   <th><?php eT('Current'); ?></th>
+            </tr>
+        </thead>
+        <tbody>
+        <tr>
+               <td>max_input_vars</td>
+               <td><?= $model::RECOMMENDED_MAX_INPUT_VARS ?></td>
+               <td>
+                   <?php if ($model->isMaxInputVarsOK) : ?>
+                       <?= $model->maxInputVars ?>
+                   <?php else : ?>
+                       <span class='ri-error-warning-fill text-warning' aria-hidden='true'></span>
+                       <span class='fw-bold'><?php eT("Too low"); ?>: <?= $model->maxInputVars ?></span>
+                       <br/>
+                       <?= sprintf(
+                           gT("Large surveys may lose data when saving or exporting. Please ask your system administrator to raise the PHP setting max_input_vars to at least %s."),
+                           $model::RECOMMENDED_MAX_INPUT_VARS
+                       ) ?>
+                   <?php endif; ?>
+               </td>
+        </tr>
+        <tr>
+               <td>post_max_size</td>
+               <td><?= $model::RECOMMENDED_POST_MAX_SIZE ?>M</td>
+               <td>
+                   <?php if ($model->isPostMaxSizeOK) : ?>
+                       <?= CHtml::encode(ini_get('post_max_size')) ?>
+                   <?php else : ?>
+                       <span class='ri-error-warning-fill text-warning' aria-hidden='true'></span>
+                       <span class='fw-bold'><?php eT("Too low"); ?>: <?= CHtml::encode(ini_get('post_max_size')) ?></span>
+                       <br/>
+                       <?= sprintf(
+                           gT("Saving large forms or uploading files may fail. Please ask your system administrator to raise the PHP setting post_max_size to at least %s."),
+                           $model::RECOMMENDED_POST_MAX_SIZE . 'M'
+                       ) ?>
+                   <?php endif; ?>
+               </td>
+        </tr>
+        <tr>
+               <td>upload_max_filesize</td>
+               <td><?= $model::RECOMMENDED_UPLOAD_MAX_FILESIZE ?>M</td>
+               <td>
+                   <?php if ($model->isUploadMaxFilesizeOK) : ?>
+                       <?= CHtml::encode(ini_get('upload_max_filesize')) ?>
+                   <?php else : ?>
+                       <span class='ri-error-warning-fill text-warning' aria-hidden='true'></span>
+                       <span class='fw-bold'><?php eT("Too low"); ?>: <?= CHtml::encode(ini_get('upload_max_filesize')) ?></span>
+                       <br/>
+                       <?= sprintf(
+                           gT("Importing surveys or uploading files may fail. Please ask your system administrator to raise the PHP setting upload_max_filesize to at least %s."),
+                           $model::RECOMMENDED_UPLOAD_MAX_FILESIZE . 'M'
+                       ) ?>
+                   <?php endif; ?>
+               </td>
+        </tr>
+        </tbody>
+        </table>
         <div class="row navigator">
             <div class="col-lg-4" >
                 <input id="ls-previous" class="btn btn-outline-secondary" type="button" value="<?php eT('Previous'); ?>" onclick="window.open('<?php echo $this->createUrl("installer/license"); ?>', '_top')" />
             </div>
             <div class="col-lg-4">
-                <input id="ls-check-again" class="btn btn-outline-secondary" type="button" value="<?php eT('Check again'); ?>" onclick="window.open('<?php echo $this->createUrl("installer/precheck"); ?>', '_top')" />
+                <input id="ls-check-again" class="btn btn-outline-secondary" type="button" value="<?php eT('Check again'); ?>" onclick="window.open('<?php echo $this->createUrl("installer/precheckprepare"); ?>', '_top')" />
             </div>
             <div class="col-lg-4">
 
-                <?php if (isset($next) && $next == true):?>
+                <?php if (isset($next) && $next == true) :?>
                     <input id="ls-next" class="btn btn-outline-secondary" type="button" value="<?php eT('Next'); ?>" onclick="window.open('<?php echo $this->createUrl("installer/database"); ?>', '_top')" />
                 <?php endif; ?>
             </div>

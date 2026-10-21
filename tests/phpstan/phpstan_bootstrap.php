@@ -35,11 +35,29 @@ define('FCPATH', str_replace(SELF, '', __FILE__));
 define('SYSDIR', trim(strrchr(trim(BASEPATH, '/'), '/'), '/'));
 define('YII_DEBUG', true);
 
+// This bootstrap only exists to make Yii's classes available for Psalm to
+// resolve; it never serves a real request. Yii's own error/exception
+// handlers are process-global (set_error_handler/set_exception_handler), so
+// leaving them enabled means any later PHP notice/deprecation anywhere in
+// the rest of the process - including inside Psalm's own analyzer code,
+// unrelated to LimeSurvey - gets routed through Yii's error handling and can
+// abort the whole Psalm run.
+define('YII_ENABLE_ERROR_HANDLER', false);
+define('YII_ENABLE_EXCEPTION_HANDLER', false);
+
 require_once __DIR__ . '/../../vendor/autoload.php';
 require_once BASEPATH . 'yii' . EXT;
 require_once APPPATH . 'core/LSYii_Application' . EXT;
 $config = require_once(APPPATH . 'config/internal' . EXT);
 
+// Without these, CHttpRequest::getRequestUri() throws "CHttpRequest is unable
+// to determine the request URI" as soon as anything (eg an error handler
+// deciding whether this is a REST request) touches the request component in
+// this CLI context. Same workaround as tests/bootstrap.php.
+$_SERVER['SCRIPT_FILENAME'] = 'index-test.php';
+$_SERVER['SCRIPT_NAME'] = '/index-test.php';
+$_SERVER['REQUEST_URI'] = 'index-test.php';
+$_SERVER['SERVER_NAME'] = 'localhost';
 
 Yii::$enableIncludePath = false;
 $app = Yii::createApplication('LSYii_Application', $config);
@@ -52,7 +70,6 @@ Yii::import('application.core.*', true);
 Yii::import('application.models.Template', true);
 Yii::import('application.models.Token', true);
 Yii::import('application.helpers.common_helper', true);
-Yii::import('application.helpers.globalsettings_helper', true);
 Yii::import('application.helpers.qanda_helper', true);
 Yii::import('application.helpers.expressions.em_core_helper', true);
 Yii::import('application.helpers.expressions.em_manager_helper', true);
@@ -84,14 +101,11 @@ Yii::import('ext.GeneralOptionWidget.settings.*');
 Yii::import('zii.widgets.grid.*');
 Yii::import('zii.widgets.*');
 Yii::import('zii.widgets.jui.*');
-Yii::app()->loadLibrary('admin.pclzip');
 // TODO: Replace with autoload
 LoadQuestionTypes::loadAll();
 
 // TODO: PATH_SEPARATOR for Windows
 set_include_path(get_include_path() . ':' . APPPATH . 'helpers');
-require_once(APPPATH . '/helpers/Zend/XmlRpc/Client.php');
-require_once(APPPATH . '/helpers/Zend/XmlRpc/Server.php');
 Yii::import('application.libraries.LSZend_XmlRpc_Response_Http', true);
 Yii::import('application.libraries.LSjsonRPCServer', true);
 

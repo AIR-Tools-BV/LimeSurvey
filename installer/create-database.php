@@ -30,7 +30,7 @@ function populateDatabase($oDB)
     Yii::app()->loadHelper('database');
     Yii::app()->loadHelper('update.updatedb');
     $options = '';
-    // The engine has to be explicitely set because MYSQL 8 switches the default engine to INNODB
+    // The engine has to be explicitly set because MYSQL 8 switches the default engine to INNODB
     if ($oDB->driverName == 'mysql') {
         $options = 'ENGINE=' . Yii::app()->getConfig('mysqlEngine') . ' DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci';
         if (Yii::app()->getConfig('mysqlEngine') == 'INNODB') {
@@ -631,7 +631,7 @@ function populateDatabase($oDB)
             'template' => "string(100) DEFAULT 'default'",
             'language' => "string(50) NULL",
             'additional_languages' => "text NULL",
-            'datestamp' => "string(1) NOT NULL DEFAULT 'N'",
+            'datestamp' => "string(1) NOT NULL DEFAULT 'Y'",
             'usecookie' => "string(1) NOT NULL DEFAULT 'N'",
             'allowregister' => "string(1) NOT NULL DEFAULT 'N'",
             'allowsave' => "string(1) NOT NULL DEFAULT 'Y'",
@@ -643,7 +643,10 @@ function populateDatabase($oDB)
             'ipanonymize' => "string(1) NOT NULL DEFAULT 'N'",
             'refurl' => "string(1) NOT NULL DEFAULT 'N'",
             'datecreated' => "datetime",
+            'savequotaexit' => "string(1) NOT NULL DEFAULT 'N'",
             'showsurveypolicynotice' => 'integer DEFAULT 0',
+            'showregisterpolicy' => "string(1) NOT NULL DEFAULT 'I'",
+            'showtokenpolicy' => "string(1) NOT NULL DEFAULT 'I'",
             'publicstatistics' => "string(1) NOT NULL DEFAULT 'N'",
             'publicgraphs' => "string(1) NOT NULL DEFAULT 'N'",
             'listpublic' => "string(1) NOT NULL DEFAULT 'N'",
@@ -661,6 +664,7 @@ function populateDatabase($oDB)
             'showxquestions' => "string(1) DEFAULT 'Y'",
             'showgroupinfo' => "string(1) DEFAULT 'B'",
             'shownoanswer' => "string(1) DEFAULT 'Y'",
+            'preselectnoanswer' => "string(1) DEFAULT 'I'",
             'showqnumcode' => "string(1) DEFAULT 'X'",
             'bouncetime' => "integer",
             'bounceprocessing' => "string(1) DEFAULT 'N'",
@@ -673,11 +677,12 @@ function populateDatabase($oDB)
             'showprogress' => "string(1) DEFAULT 'Y'",
             'questionindex' => "integer DEFAULT '0' NOT NULL",
             'navigationdelay' => "integer NOT NULL DEFAULT '0'",
-            'nokeyboard' => "string(1) DEFAULT 'N'",
             'alloweditaftercompletion' => "string(1) DEFAULT 'N'",
             'googleanalyticsstyle' => "string(1) NULL",
             'googleanalyticsapikey' => "string(25) NULL",
             'tokenencryptionoptions' => "text NULL",
+            'access_mode' => "string(1) DEFAULT 'O'",
+            'lastmodified' => 'datetime NOT NULL',
         ), $options);
 
         $oDB->createCommand()->addPrimaryKey('{{surveys_pk}}', '{{surveys}}', 'sid');
@@ -720,7 +725,7 @@ function populateDatabase($oDB)
             'format' => "string(1) NULL DEFAULT NULL",
             'savetimings' => "string(1) NOT NULL DEFAULT 'N'",
             'template' => "string(100) NULL DEFAULT 'default'",
-            'datestamp' => "string(1) NOT NULL DEFAULT 'N'",
+            'datestamp' => "string(1) NOT NULL DEFAULT 'Y'",
             'usecookie' => "string(1) NOT NULL DEFAULT 'N'",
             'allowregister' => "string(1) NOT NULL DEFAULT 'N'",
             'allowsave' => "string(1) NOT NULL DEFAULT 'Y'",
@@ -731,7 +736,10 @@ function populateDatabase($oDB)
             'ipaddr' => "string(1) NOT NULL DEFAULT 'N'",
             'ipanonymize' => "string(1) NOT NULL DEFAULT 'N'",
             'refurl' => "string(1) NOT NULL DEFAULT 'N'",
+            'savequotaexit' => "string(1) NOT NULL DEFAULT 'N'",
             'showsurveypolicynotice' => "integer NULL DEFAULT '0'",
+            'showregisterpolicy' => "string(1) NOT NULL DEFAULT 'I'",
+            'showtokenpolicy' => "string(1) NOT NULL DEFAULT 'I'",
             'publicstatistics' => "string(1) NOT NULL DEFAULT 'N'",
             'publicgraphs' => "string(1) NOT NULL DEFAULT 'N'",
             'listpublic' => "string(1) NOT NULL DEFAULT 'N'",
@@ -748,12 +756,12 @@ function populateDatabase($oDB)
             'showxquestions' => "string(1) NULL DEFAULT 'Y'",
             'showgroupinfo' => "string(1) NULL DEFAULT 'B'",
             'shownoanswer' => "string(1) NULL DEFAULT 'Y'",
+            'preselectnoanswer' => "string(1) NULL DEFAULT 'I'",
             'showqnumcode' => "string(1) NULL DEFAULT 'X'",
             'showwelcome' => "string(1) NULL DEFAULT 'Y'",
             'showprogress' => "string(1) NULL DEFAULT 'Y'",
             'questionindex' => "integer NULL DEFAULT '0'",
             'navigationdelay' => "integer NULL DEFAULT '0'",
-            'nokeyboard' => "string(1) NULL DEFAULT 'N'",
             'alloweditaftercompletion' => "string(1) NULL DEFAULT 'N'"
         ), $options);
 
@@ -769,7 +777,7 @@ function populateDatabase($oDB)
             'format' => 'G',
             'savetimings' => 'N',
             'template' => 'fruity_twentythree',
-            'datestamp' => 'N',
+            'datestamp' => 'Y',
             'usecookie' => 'N',
             'allowregister' => 'N',
             'allowsave' => 'Y',
@@ -780,7 +788,10 @@ function populateDatabase($oDB)
             'ipaddr' => 'N',
             'ipanonymize' => 'N',
             'refurl' => 'N',
+            'savequotaexit' => 'N',
             'showsurveypolicynotice' => '0',
+            'showtokenpolicy' => 'N',
+            'showregisterpolicy' => 'N',
             'publicstatistics' => 'N',
             'publicgraphs' => 'N',
             'listpublic' => 'N',
@@ -793,12 +804,12 @@ function populateDatabase($oDB)
             'showxquestions' => 'Y',
             'showgroupinfo' => 'B',
             'shownoanswer' => 'Y',
+            'preselectnoanswer' => 'N',
             'showqnumcode' => 'X',
             'showwelcome' => 'Y',
             'showprogress' => 'Y',
             'questionindex' => '0',
             'navigationdelay' => '0',
-            'nokeyboard' => 'N',
             'alloweditaftercompletion' => 'N'
         );
         $oDB->createCommand()->insert("{{surveys_groupsettings}}", $attributes1);
@@ -824,6 +835,7 @@ function populateDatabase($oDB)
                 "ipaddr" => "I",
                 'ipanonymize' => "I",
                 "refurl" => "I",
+                "savequotaexit" => "I",
                 "showsurveypolicynotice" => 0,
                 "publicstatistics" => "I",
                 "publicgraphs" => "I",
@@ -841,12 +853,12 @@ function populateDatabase($oDB)
                 "showxquestions" => "I",
                 "showgroupinfo" => "I",
                 "shownoanswer" => "I",
+                "preselectnoanswer" => "I",
                 "showqnumcode" => "I",
                 "showwelcome" => "I",
                 "showprogress" => "I",
                 "questionindex" => -1,
                 "navigationdelay" => -1,
-                "nokeyboard" => "I",
                 "alloweditaftercompletion" => "I",
         );
         $oDB->createCommand()->insert("{{surveys_groupsettings}}", $attributes2);
@@ -1100,7 +1112,8 @@ function populateDatabase($oDB)
             'validation_key_expiration' => 'datetime',
             'last_forgot_email_password' => 'datetime',
             'expires' => 'datetime',
-            'user_status' => 'integer NOT NULL DEFAULT 1'
+            'user_status' => 'integer NOT NULL DEFAULT 1',
+            'session_token' => 'string(64) NULL'
         ), $options);
 
         $oDB->createCommand()->createIndex('{{idx1_users}}', '{{users}}', 'users_name', true);
@@ -1186,6 +1199,17 @@ function populateDatabase($oDB)
 
         // Set database version
         $oDB->createCommand()->insert("{{settings_global}}", ['stg_name' => 'DBVersion' , 'stg_value' => $databaseCurrentVersion]);
+        // Record the bundled asset version so the very first admin page load doesn't think the published
+        // assets are stale and wipe the tmp/assets directory mid-request (see UpdateForm::checkAssets()),
+        // which would delete files that other widgets in that same request just published.
+        $oDB->createCommand()->insert("{{settings_global}}", ['stg_name' => 'AssetsVersion' , 'stg_value' => $version['assetsversionnumber']]);
+
+        // Default the admin (uid 1) dashboard to the list widget view
+        $oDB->createCommand()->insert('{{settings_user}}', [
+            'uid' => 1,
+            'stg_name' => 'welcome_page_widget',
+            'stg_value' => 'box-widget',
+        ]);
     } catch (Exception $e) {
         $oTransaction->rollback();
         throw new CHttpException(500, $e->getMessage());

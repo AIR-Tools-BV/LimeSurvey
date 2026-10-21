@@ -27,6 +27,7 @@ class FileFetcherUploadZip extends FileFetcher
      * @param string $source
      * @return void
      */
+    #[\Override]
     public function setSource($source)
     {
         // Not used.
@@ -35,13 +36,16 @@ class FileFetcherUploadZip extends FileFetcher
     /**
      * Fetch files, meaning grab uploaded ZIP file and
      * unzip it in system tmp folder.
+     * Files left over from a previous, unfinished upload in the same
+     * session are removed first.
      *
      * @return void
      */
+    #[\Override]
     public function fetch()
     {
         $this->checkFileSizeError();
-        $this->clearTmpdir();
+        $this->abort();
         $this->extractZipFile($this->getTempdir());
     }
 
@@ -51,6 +55,7 @@ class FileFetcherUploadZip extends FileFetcher
      * @param string $destdir
      * @return boolean
      */
+    #[\Override]
     public function move($destdir)
     {
         if (empty($destdir)) {
@@ -88,6 +93,7 @@ class FileFetcherUploadZip extends FileFetcher
      * @return ExtensionConfig
      * @throws Exception
      */
+    #[\Override]
     public function getConfig()
     {
         $tempdir = $this->getTempdir();
@@ -143,11 +149,12 @@ class FileFetcherUploadZip extends FileFetcher
      * Abort unzip, clear files and session.
      * @return void
      */
+    #[\Override]
     public function abort()
     {
-        // Remove any files.
-        $tempdir = $this->getTempdir();
-        if ($tempdir) {
+        // Remove any files. Read the session state directly, since getTempdir() would create a new folder.
+        $tempdir = App()->user->getState('filefetcheruploadzip_tmpdir');
+        if ($tempdir && is_dir($tempdir)) {
             rmdirr($tempdir);
         }
 
@@ -222,8 +229,8 @@ class FileFetcherUploadZip extends FileFetcher
     protected function extractZipFile($tempdir)
     {
         \Yii::import('application.helpers.common_helper', true);
-        \Yii::app()->loadLibrary('admin.pclzip');
 
+        /** @todo: Move this after checking if the file exists? */
         $this->checkZipBomb();
 
         if (!is_file($_FILES['the_file']['tmp_name'])) {
@@ -236,21 +243,14 @@ class FileFetcherUploadZip extends FileFetcher
             throw new Exception("No filter name is set, can't unzip.");
         }
 
-        $zip = new \PclZip($_FILES['the_file']['tmp_name']);
-        $aExtractResult = $zip->extract(
-            PCLZIP_OPT_PATH,
-            $tempdir,
-            PCLZIP_CB_PRE_EXTRACT,
-            $this->filterName
-        );
+        $zipExtractor = new \LimeSurvey\Models\Services\ZipExtractor($_FILES['the_file']['tmp_name']);
+        $zipExtractor->setFilterCallback($this->filterName);
 
-        if ($aExtractResult === 0) {
+        if ($zipExtractor->extractTo($tempdir) === false) {
             throw new Exception(
                 gT("This file is not a valid ZIP file archive. Import failed.")
-                . ' ' . $zip->error_string
+                . ' ' . $zipExtractor->getExtractStatus()
             );
-        } else {
-            // All good?
         }
     }
 

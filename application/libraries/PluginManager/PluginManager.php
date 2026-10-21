@@ -81,29 +81,6 @@ class PluginManager extends \CApplicationComponent
         }
         $this->loadPlugins();
     }
-    /**
-     * Return a list of installed plugins, but only if the files are still there
-     * @deprecated unused in 5.3.8
-     * This prevents errors when a plugin was installed but the files were removed
-     * from the server.
-     *
-     * @return array
-     */
-    public function getInstalledPlugins()
-    {
-        $pluginModel = Plugin::model();
-        $records = $pluginModel->findAll(['order' => 'priority DESC']);
-
-        $plugins = array();
-
-        foreach ($records as $record) {
-            // Only add plugins we can find
-            if ($this->loadPlugin($record->name, $record->id, $record->active) !== false) {
-                $plugins[$record->id] = $record;
-            }
-        }
-        return $plugins;
-    }
 
     /**
      * @param string $destdir
@@ -137,6 +114,9 @@ class PluginManager extends \CApplicationComponent
         }
 
         $newName = (string) $extensionConfig->xml->metadata->name;
+        if (!$this->validatePluginName($newName)) {
+            return [false, gT('Invalid plugin name in config.xml.')];
+        }
         if (!$this->isWhitelisted($newName)) {
             return [false, gT('The plugin is not in the plugin allowlist.')];
         }
@@ -174,7 +154,7 @@ class PluginManager extends \CApplicationComponent
         }
     }
 
-    /**
+/**
      * Returns the storage instance of type $storageClass.
      * If needed initializes the storage object.
      * @param string $storageClass
@@ -182,18 +162,24 @@ class PluginManager extends \CApplicationComponent
      */
     public function getStore($storageClass)
     {
+        if (isset($this->stores[$storageClass])) {
+            return $this->stores[$storageClass];
+        }
+        $withoutNamespace = class_exists($storageClass, false);
+        $withNamespace = class_exists('LimeSurvey\\PluginManager\\' . $storageClass, false);
         if (
-            !class_exists($storageClass)
-                && class_exists('LimeSurvey\\PluginManager\\' . $storageClass)
+            !$withoutNamespace && $withNamespace
         ) {
             $storageClass = 'LimeSurvey\\PluginManager\\' . $storageClass;
+        } elseif (!($withoutNamespace || $withNamespace)) {
+            $relativePath = App()->getConfig('rootdir') . "/application/libraries/PluginManager/Storage/{$storageClass}.php";
+            if (file_exists($relativePath)) {
+                require_once $relativePath;
+                $storageClass = 'LimeSurvey\\PluginManager\\' . $storageClass;
+            }
         }
-        if (!isset($this->stores[$storageClass])) {
-            $this->stores[$storageClass] = new $storageClass();
-        }
-        return $this->stores[$storageClass];
+        return $this->stores[$storageClass] = new $storageClass();
     }
-
 
     /**
      * This function returns an API object, exposing an API to each plugin.
@@ -244,6 +230,16 @@ class PluginManager extends \CApplicationComponent
                 }
             }
         }
+    }
+
+    /**
+     * Whether at least one plugin is subscribed to the given event.
+     * @param string $eventName
+     * @return boolean
+     */
+    public function hasSubscribers($eventName)
+    {
+        return !empty($this->subscriptions[$eventName]);
     }
 
     /**
@@ -418,8 +414,24 @@ class PluginManager extends \CApplicationComponent
         if (empty($alias)) {
             return null;
         }
-        $folder = Yii::getPathOfAlias($alias) . '/' . $config->getName();
+        $pluginName = $config->getName();
+        if (!$this->validatePluginName($pluginName)) {
+            throw new \InvalidArgumentException(gT('Invalid plugin name in config.xml.'));
+        }
+        $folder = Yii::getPathOfAlias($alias) . '/' . $pluginName;
         return $folder;
+    }
+
+    /**
+     * Validate that a plugin name can safely serve as folder, file and class name.
+     * Plugin names are used as a flat class identifier throughout the plugin manager.
+     *
+     * @param string $pluginName
+     * @return bool
+     */
+    public function validatePluginName($pluginName)
+    {
+        return preg_match('/^[A-Za-z_][A-Za-z0-9_]*$/', (string) $pluginName) === 1;
     }
 
     /**
@@ -428,7 +440,7 @@ class PluginManager extends \CApplicationComponent
      * @param string $pluginName
      * @param int $id Identifier used for identifying a specific plugin instance.
      * @param boolean $init launch init function (if exist)
-     * If ommitted will return the first instantiated plugin with the given name.
+     * If omitted will return the first instantiated plugin with the given name.
      * @return iPlugin|null The plugin or null when missing
      */
     public function loadPlugin($pluginName, $id = null, $init = true)
@@ -497,7 +509,7 @@ class PluginManager extends \CApplicationComponent
         // If DB version is less than 165 : plugins table don't exist. 175 update it (boolean to integer for active).
         $dbVersion = \SettingGlobal::model()->find("stg_name=:name", array(':name' => 'DBVersion')); // Need table SettingGlobal, but settings from DB is set only in controller, not in App, see #11294
         // @todo This previous line seems to be an unnecessary query on every page load, better would be to make the settings available to console command properly, see #11291
-        if ($dbVersion && $dbVersion->stg_value >= 165) {
+        if ($dbVersion && $dbVersion->stg_value >= 401) {
             $pluginModel = Plugin::model();
             if ($dbVersion->stg_value >= 411) {
                 /* Before DB 411 version, unable to set order, must check to load before upgrading */
@@ -519,7 +531,7 @@ class PluginManager extends \CApplicationComponent
         } else {
             // Log it?
         }
-        $this->dispatchEvent(new PluginEvent('afterPluginLoad', $this)); // Alow plugins to do stuff after all plugins are loaded
+        $this->dispatchEvent(new PluginEvent('afterPluginLoad', $this)); // Allow plugins to do stuff after all plugins are loaded
     }
 
     /**
@@ -596,11 +608,11 @@ class PluginManager extends \CApplicationComponent
      * Get plugin description.
      * First look in config.xml, then in plugin class.
      * @param string $class
-     * @param ExtensionConfig $extensionConfig
+     * @param ?ExtensionConfig $extensionConfig
      * @return string
      * @todo Localization.
      */
-    protected function getPluginDescription(string $class, \ExtensionConfig $extensionConfig = null)
+    protected function getPluginDescription(string $class, ?ExtensionConfig $extensionConfig = null)
     {
         $desc = null;
 
@@ -623,11 +635,11 @@ class PluginManager extends \CApplicationComponent
      * Get plugin name.
      * First look in config.xml, then in plugin class.
      * @param string $class
-     * @param ExtensionConfig $extensionConfig
+     * @param ?ExtensionConfig $extensionConfig
      * @return string
      * @todo Localization.
      */
-    protected function getPluginName(string $class, \ExtensionConfig $extensionConfig = null)
+    protected function getPluginName(string $class, ?ExtensionConfig $extensionConfig = null)
     {
         $name = null;
 
@@ -692,6 +704,7 @@ class PluginManager extends \CApplicationComponent
             'UpdateCheck',
             'AzureOAuthSMTP',
             'GoogleOAuthSMTP',
+            'ReactEditor',
         ];
     }
 

@@ -2,7 +2,7 @@
 
 /*
 * LimeSurvey
-* Copyright (C) 2013 The LimeSurvey Project Team / Carsten Schmitz
+* Copyright (C) 2013-2026 The LimeSurvey Project Team
 * All rights reserved.
 * License: GNU/GPL License v2 or later, see LICENSE.php
 * LimeSurvey is free software. This version may have been modified pursuant
@@ -66,7 +66,7 @@ class Database extends SurveyCommonAction
         if ($sAction == "updatedefaultvalues" && Permission::model()->hasSurveyPermission($this->iSurveyID, 'surveycontent', 'update')) {
             $this->actionUpdateDefaultValues($this->iSurveyID);
         }
-        if (($sAction == "updatesurveylocalesettings") && (Permission::model()->hasSurveyPermission($this->iSurveyID, 'surveylocale', 'update') || Permission::model()->hasSurveyPermission($iSurveyID, 'surveysettings', 'update'))) {
+        if (($sAction == "updatesurveylocalesettings") && (Permission::model()->hasSurveyPermission($this->iSurveyID, 'surveylocale', 'update') || Permission::model()->hasSurveyPermission($this->iSurveyID, 'surveysettings', 'update'))) {
             $this->actionUpdateSurveyLocaleSettings($this->iSurveyID);
         }
         if (
@@ -78,6 +78,28 @@ class Database extends SurveyCommonAction
         }
 
         Yii::app()->setFlashMessage(gT("Unknown action or no permission."), 'error');
+
+        if (Yii::app()->request->getPost('responsejson', 0) == 1) {
+            return Yii::app()->getController()->renderPartial(
+                '/admin/super/_renderJson',
+                array(
+                    'data' => [
+                        'success' => false,
+                        'updated' => null,
+                        'DEBUG' => [
+                            'POST' => $_POST,
+                            'reloaded' => [],
+                            'aURLParams' => '',
+                            'initial' => '',
+                            'afterApply' => ''
+                        ]
+                    ],
+                ),
+                false,
+                false
+            );
+        }
+
         $this->getController()->redirect(Yii::app()->request->urlReferrer);
     }
 
@@ -85,13 +107,18 @@ class Database extends SurveyCommonAction
      * This is a convenience function to update/delete answer default values. If the given
      * $defaultvalue is empty then the entry is removed from table defaultvalues
      *
+     * Note: Private since it does no permission check of its own, it is only called by
+     * actionUpdateDefaultValues() after the surveycontent update permission was checked.
+     *
      * @param integer $qid   Question ID
+     * @param integer $sqid  Subquestion ID (0 if none)
      * @param integer $scale_id  Scale ID
      * @param string $specialtype  Special type (i.e. for  'Other')
      * @param string $language     Language (defaults are language specific)
      * @param mixed $defaultvalue    The default value itself
+     * @return void
      */
-    public function updateDefaultValues($qid, $sqid, $scale_id, $specialtype, $language, $defaultvalue)
+    private function updateDefaultValues($qid, $sqid, $scale_id, $specialtype, $language, $defaultvalue)
     {
         $arDefaultValue = DefaultValue::model()
             ->find(
@@ -148,8 +175,13 @@ class Database extends SurveyCommonAction
 
     /**
      * action to do when update default value
+     *
+     * Note: The question is looked up by qid and sid together, so the permission
+     * checked on the survey also covers the question being updated.
+     *
      * @param integer $iSurveyID
      * @return void (redirect)
+     * @throws CHttpException
      */
     private function actionUpdateDefaultValues($iSurveyID)
     {
@@ -157,9 +189,13 @@ class Database extends SurveyCommonAction
         $aSurveyLanguages = $oSurvey->allLanguages;
         $sBaseLanguage = $oSurvey->language;
 
+        $arQuestion = Question::model()->findByAttributes(array('qid' => $this->iQuestionID, 'sid' => $iSurveyID));
+        if (empty($arQuestion)) {
+            throw new CHttpException(404, gT("Question not found"));
+        }
+
         Question::model()->updateAll(array('same_default' => Yii::app()->request->getPost('samedefault') ? 1 : 0), 'sid=:sid ANd qid=:qid', array(':sid' => $iSurveyID, ':qid' => $this->iQuestionID));
 
-        $arQuestion = Question::model()->findByAttributes(array('qid' => $this->iQuestionID));
         $sQuestionType = $arQuestion['type'];
 
         $questionThemeMetaData = QuestionTheme::findQuestionMetaData($sQuestionType);
@@ -190,8 +226,8 @@ class Database extends SurveyCommonAction
         }
         if ($questionThemeMetaData['settings']->answerscales == 0 && $questionThemeMetaData['settings']->subquestions == 0) {
             foreach ($aSurveyLanguages as $sLanguage) {
-                // Qick and dirty insert for yes/no defaul value
-                // write the the selectbox option, or if "EM" is slected, this value to table
+                // Quick and dirty insert for yes/no default value
+                // write the selectbox option, or if "EM" is selected, this value to table
                 if ($sQuestionType == 'Y') {
                     /// value for all langs
                     if (Yii::app()->request->getPost('samedefault') == 1) {
@@ -256,7 +292,7 @@ class Database extends SurveyCommonAction
         // form inputs are named differently from db fields
         // - they have a prefix and a language suffix
         // - we need to convert this to a array of database
-        // - fields for each language indexed by lanuage code
+        // - fields for each language indexed by language code
         $langFields = [
             'surveyls_url' => 'url_',
             'surveyls_urldescription' => 'urldescrip_',
@@ -284,8 +320,6 @@ class Database extends SurveyCommonAction
                 $input[$langCode] = $langInput;
             }
         }
-
-
         $metaData = [];
         try {
             $metaData = $surveyUpdater->update(
@@ -298,7 +332,12 @@ class Database extends SurveyCommonAction
             // @todo: Should we be catching only this kind of exceptions or all Throwable?
             // BUt that could show sensitive information
             Yii::app()->setFlashMessage(
-                $e->getMessage(),
+                $e->getErrorModel()
+                    ? CHtml::errorSummary(
+                        $e->getErrorModel(),
+                        CHtml::tag('p', array('class' => 'strong'), CHtml::encode($e->getMessage()))
+                    )
+                    : $e->getMessage(),
                 'error'
             );
         }
