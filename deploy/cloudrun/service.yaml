@@ -95,6 +95,10 @@ spec:
               rm -rf /var/www/html/upload/surveys
               ln -sfn /mnt/uploads/surveys /var/www/html/upload/surveys
 
+              # Bring the DB schema up to this LimeSurvey version. A no-op when it is current.
+              # If it fails, set -e stops the container and the previous revision keeps serving.
+              runuser -u www-data -- php /var/www/html/application/commands/console.php updatedb
+
               # ---- publish Yii assets at BOOT, on every instance ----
               # Yii copies CSS/JS into /tmp/assets/<hash>/ lazily, on whichever instance
               # renders a page. That path is per-instance in-memory storage, so with more
