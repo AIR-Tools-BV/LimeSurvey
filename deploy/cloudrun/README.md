@@ -137,7 +137,7 @@ python3 -c "import secrets;print(secrets.token_hex(24),end='')" | gcloud secrets
 python3 -c "import secrets;print(secrets.token_hex(32),end='')" | gcloud secrets create limesurvey-encryption-secretbox-key --data-file=-
 ```
 
-Grant `limesurvey-run@air-tools-prod-1cca1.iam.gserviceaccount.com` the Secret Accessor role on both.
+Created on 2026-10-21. `limesurvey-run@` reads them through its project-wide Secret Accessor role.
 Never change these values once data is encrypted with them.
 
 ## Note on secrets
