@@ -41,10 +41,16 @@ spec:
         # Trade-off: redis is per-instance, so cached settings can be briefly stale across
         # instances after an admin edit. Low risk for respondents; move the Yii cache to
         # the DB (CDbCache) if that window ever matters.
-        # maxScale x containerConcurrency is a HARD ceiling: at 20x10 a 200-concurrent
-        # burst returned 429s. 40x10 = 400 in-flight, and the DB has max_connections=1000
-        # so Cloud SQL is not the limit. Costs nothing at rest because minScale is 0.
-        autoscaling.knative.dev/maxScale: "40"
+        # maxScale x containerConcurrency is a HARD ceiling on in-flight requests, but it
+        # is also how bad a DB stall can get. At 40x10=400, two incidents (2026-09-10,
+        # 2026-11-15) showed the real failure mode: once the DB is slow for ANY reason
+        # (a traffic spike, a tier change), Cloud Run scales out to chase it, each new
+        # instance adds more concurrent session writes to lime_sessions, and that turns
+        # a slow DB into a disk-filling write storm that crashes it outright. Capped to
+        # 10 (100 in-flight) so a DB stall degrades to 429s instead of a pile-up — this
+        # was decided after the Sept incident but never shipped until the Nov one forced it.
+        # Real invite waves run ~2-33 req/s, well inside 100 in-flight at normal latency.
+        autoscaling.knative.dev/maxScale: "10"
         # App must not start before the SQL proxy is listening
         # Keep a browser pinned to one instance. Belt-and-braces with the boot-time asset
         # warm-up: affinity alone did NOT fix the /tmp/assets 404s, and the warm-up only
