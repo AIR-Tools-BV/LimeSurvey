@@ -6,9 +6,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # contents: write lets the last step commit the new image pin to master.
-    permissions:
-      contents: write
     steps:
 
       - name: Code checkout
@@ -52,7 +49,7 @@ jobs:
       # Enforce the whole service spec from source, THEN roll the new image — same intent
       # as the old GKE step (config must not drift), now against Cloud Run.
       #
-      # service.yaml pins an immutable digest for manual deploys; here we substitute the
+      # service.yaml holds a placeholder image; here we substitute the
       # freshly pushed tag so spec + image land in ONE revision. The image is pushed in the
       # step above, so the tag exists before this runs — deploying against a not-yet-pushed
       # tag makes Cloud Run cache an "image not found" failure on a revision name it then
@@ -74,32 +71,3 @@ jobs:
           gcloud run services describe limesurvey --region europe-west1 \
             --project "$GOOGLE_PROJECT" --format='value(status.latestReadyRevisionName)'
 
-      # Keep service.yaml on master pinned to what now runs, so a manual
-      # `gcloud run services replace` can never roll the image back.
-      # Pushes made with GITHUB_TOKEN do not trigger workflows, so this cannot loop.
-      - name: Pin the deployed image on master
-        env:
-          GOOGLE_PROJECT: ${{ secrets.GOOGLE_PROJECT }}
-          TAG: ${{ steps.get_tag.outputs.TAG }}
-        run: |
-          IMAGE="europe-west1-docker.pkg.dev/${GOOGLE_PROJECT}/air-tools/limesurvey"
-          DIGEST=$(gcloud artifacts docker images describe "${IMAGE}:${TAG}" --format='value(image_summary.digest)')
-          if ! printf '%s' "$DIGEST" | grep -qE '^sha256:[0-9a-f]{64}$'; then
-            echo "Could not resolve the digest of ${IMAGE}:${TAG} (got '$DIGEST')." >&2
-            exit 1
-          fi
-          git checkout -- deploy/cloudrun/service.yaml
-          git fetch origin master
-          git checkout -B master origin/master
-          sed -i -E "s#^(\s*)image: europe-west1-docker\.pkg\.dev/.*/limesurvey[@:].*#\1image: ${IMAGE}@${DIGEST}#" \
-            deploy/cloudrun/service.yaml
-          sed -i -E "s#^(\s*)\# Digest = .*#\1\# Digest = ${TAG}#" deploy/cloudrun/service.yaml
-          grep -n -B1 "image: .*limesurvey" deploy/cloudrun/service.yaml
-          if git diff --quiet; then
-            echo "service.yaml already pins ${TAG}."
-            exit 0
-          fi
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(cloudrun): pin service.yaml to ${TAG}"
-          git push origin master
