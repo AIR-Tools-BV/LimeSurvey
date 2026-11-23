@@ -52,6 +52,8 @@ return array(
     'config' => array(
         'debug' => 0,
         'debugsql' => 0,
+        // Upstream defaults to MyISAM. Cloud SQL refuses to create MyISAM tables, and MyISAM is not crash-safe.
+        'mysqlEngine' => 'InnoDB',
         // Same keys on every instance, or data encrypted on one cannot be read on another.
         'encryptionnonce' => $requireEnv('ENCRYPTION_NONCE'),
         'encryptionsecretboxkey' => $requireEnv('ENCRYPTION_SECRETBOX_KEY'),
