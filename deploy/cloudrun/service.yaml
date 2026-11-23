@@ -77,8 +77,10 @@ spec:
           # replace` runs before a push finishes it caches an "image not found" failure
           # on a revision name it then reuses for identical specs — which cannot be
           # deleted (it is the latest revision), so the service gets stuck.
-          # Digest = v0.0.112-cloudrun
-          image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey@sha256:5d3a9c9b067f581ba5e8517b5ab34df57f7777719973b4f37319f359b8a5c69b
+          # Keep this on the latest deployed tag. A stale pin rolls the service back to an
+          # older image; the 6.x one failed `updatedb` against the 7.x DB on 2026-11-15.
+          # Digest = v0.1.3
+          image: europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey@sha256:23c89aed8a6cf3d8e36bb359f4b80ee3739549ac5fc36d99e3884561fa584648
           ports:
             - name: http1
               containerPort: 80

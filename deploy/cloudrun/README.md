@@ -27,12 +27,23 @@ structurally rather than bought around.
 
 ## Deploy
 
+Push a tag. The GitHub Action (`.github/workflows/gcr.yml`) builds the image, swaps its tag
+into `service.yaml` and deploys it. Then set the `image:` digest in `service.yaml` to that
+tag's digest and commit, so the file matches what runs:
+
+```bash
+gcloud artifacts docker images describe \
+  europe-west1-docker.pkg.dev/air-tools-prod-1cca1/air-tools/limesurvey:<tag> \
+  --format='value(image_summary.digest)'
+```
+
+To change only the spec, edit `service.yaml` on master and apply it by hand:
+
 ```bash
 gcloud run services replace deploy/cloudrun/service.yaml --region europe-west1
 ```
 
-Images are built by the GitHub Action on tag push (`.github/workflows/gcr.yml`).
-Update the `image:` tag in `service.yaml` and re-run the command above.
+Check the pinned digest first. A stale pin silently rolls the image back.
 
 ## Shape
 
