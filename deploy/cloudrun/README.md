@@ -27,16 +27,17 @@ structurally rather than bought around.
 
 ## Deploy
 
-Push a tag. The GitHub Action (`.github/workflows/gcr.yml`) builds the image, deploys it,
-then commits the new digest to `service.yaml` on master. The file always matches what runs.
+Push a tag. The GitHub Action (`.github/workflows/gcr.yml`) builds the image, fills its tag
+into `service.yaml` and deploys it.
 
-To change only the spec, edit `service.yaml` on master and apply it by hand:
+To change only the spec, edit `service.yaml` and run:
 
 ```bash
-gcloud run services replace deploy/cloudrun/service.yaml --region europe-west1
+deploy/cloudrun/apply.sh
 ```
 
-Pull master first, so you apply the latest pin.
+It applies the file with the image that runs now. `service.yaml` holds a placeholder image,
+so a raw `gcloud run services replace` fails instead of swapping the image.
 
 ## Shape
 
