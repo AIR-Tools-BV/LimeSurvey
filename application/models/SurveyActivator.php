@@ -348,7 +348,8 @@ class SurveyActivator
             // Refresh schema cache just in case the table existed in the past
             Yii::app()->db->schema->getTable($sTableName, true);
         } catch (Exception $e) {
-                $this->error = 'surveytablecreation';
+            // The admin only sees a generic "too many questions" text, so keep the real cause in the logs.
+            error_log("Survey {$this->survey->sid}: response table creation failed: " . $e->getMessage());
             if (App()->getConfig('debug')) {
                 $this->error = $e->getMessage();
             } else {
